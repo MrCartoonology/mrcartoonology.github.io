@@ -22,7 +22,7 @@ title: David Schneider Machine Learning & AI Portfolio
 #email: mrcartoonology@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
   Portfolio site for AI and machine learning
-baseurl: "" # the subpath of your site, e.g. /blog
+#baseurl: "" # the subpath of your site, e.g. /blog
 url: "http://mrcartoonology.github.io" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: mrcartoonology
 github_username:  mrcartoonology

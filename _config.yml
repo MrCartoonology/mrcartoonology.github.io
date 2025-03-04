@@ -18,8 +18,8 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: MrCartoonology Machine Learning and AI Site
-email: mrcartoonology@gmail.com
+title: David Schneider Machine Learning & AI Portfolio
+#email: mrcartoonology@gmail.com
 description: >- # this means to ignore newlines until "baseurl:"
   Portfolio site for AI and machine learning
 baseurl: "" # the subpath of your site, e.g. /blog

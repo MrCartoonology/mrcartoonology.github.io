@@ -1,0 +1,39 @@
+---
+layout: post
+title:  "Catching up with RNNs"
+date:   2025-03-04 12:38:00 -0800
+categories: jekyll update
+---
+## Karpathy Blog
+* Great blog by Karpathy from 2015 [The Unreasonable Effectiveness of Recurrent Neural Networks](https://karpathy.github.io/2015/05/21/rnn-effectiveness/)
+  * Data - [wikipedia](http://mattmahoney.net/dc/enwik9.zip), Gutenberg project free books, like [Book of Dragons](https://www.gutenberg.org/ebooks/23661.txt.utf-8)
+
+### Min Char Experiments
+Running his [min-char-rnn](https://github.com/MrCartoonology/mlscratch/blob/main/rnn/karpathy_min-char-rnn.py)
+just a single vanilla RNN cell - it gets a loss of 38 (on [Book of Dragons](https://www.gutenberg.org/cache/epub/23661/pg23661.txt), get output like
+
+```
+ arch to as. You mally or a
+snow, for dragon--wound, I'P tool that re all cock." Whine, not," he counquice indees to
+dragot sun'me aryorg, and stights out to have yourd in by he halit.
+```
+
+fun to see `dragon` in there. 
+
+* Data has 247k characters, 91 unique characters. zip -9 reduces by 64%, down to 89k.
+* model has ~ 30k weights, float32 so - this is 120k bytes.
+
+### PyTorch RNN Code
+
+####  First tutorial
+
+[char_rnn_classification_tutorial](https://pytorch.org/tutorials/intermediate/char_rnn_classification_tutorial) - classify names, interesting we convert the unicode names to Ascii. There are 88 unique characters in the files, and they get turned into 55. One of the characters that gets removes is `ł` which shows up in the Polish name `Marszałek`. The conversion is then `Marszaek` I guess this is fine for classifying, but for translation - Google translate says this name is translated to Marshal - and it is the `ł` character that seems to get translated to the `l`, wouldn't want to drop it.
+
+#### Second Tutorial
+[char_rnn_generation_tutorial](https://pytorch.org/tutorials/intermediate/char_rnn_generation_tutorial.html) - I've noticed some other weirdness with the data - the names are not unique in the original data. For instance Mustafa shows up 28 times in the Arabic.txt - this is before the `unicodeToAscii` function. Might be good to uniquify the names for the tutorials (noticed this 5-18-2025).
+
+The tutorial is interesting, it must be hard to prep full batches and epochs, our data loader just gets a random sample to learn from. The network seems a little crazy in the tutorial - so I did a stacked RNN - but did not get nearly the loss result:
+
+| Original Loss curve (interestesting archiecture, learning rate = 0.005) | Stacked Vanilla RNN |
+|--------------|--------------|
+| ![Alt text](./images/image1.png) | ![Alt text](./images/image2.png) |

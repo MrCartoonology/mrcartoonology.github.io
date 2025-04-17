@@ -1,32 +1,43 @@
 ---
 layout: post
-title:  "Experiments with supercalifragilisticexpialidocious"
-date:   2025-03-05 12:38:00 -0800
+title:  "First Experiments with supercalifragilisticexpialidocious"
+date:   2025-04-16 12:38:00 -0800
 categories: jekyll update 
 ---
-## AI Engineering Book
-This is a great [book](https://a.co/d/2Zg6JWS). Its inspiring me to think of many interesting portfolio projects. One thing I'm curious about, that should be pretty simple - what tokens are `supercalifragilisticexpialidocious` split into, 
-and what would happen if we finetuned a model to "forget" what it knew about the word - and then asked it what it meant?
+## Tokens and Unlearning
+Inspired by the [AI Engineering Book](https://a.co/d/2Zg6JWS) by [Chip Huyen](https://huyenchip.com/), I'm curious:
 
-If it never saw the tokens together as a word, then would we see it combine meanings from the individual tokens?
+* How is `supercalifragilisticexpialidocious` tokenized?
+* what would happen if we finetuned a model to *forget* what it knows about  `supercal...` and then asked what it means?
 
-Let's see what an LLM would do with a unknown `tokenstein` (random set of tokens) and then see if we can `unlearn` supercal and get
-a general tokenstein response. 
+Would the model construct meaning from the subword tokens? We'll take some side token based side-tracks along the way
 
-Guess - some success with forgetting `supercal...`, but won't get the general tokenstein response without additional training.
+
+### Expectations
+
+We can see what a model does with an unknown `tokenstein` (look! I made a new word! Definition - random set of tokens) and compare its response to how it 
+handles `supercal...`, after we've fine-tuned it to *forget* the word.
+
+**Guess:** some success with forgetting `supercal...`, but won't get the general tokenstein response without additional training.
 
 ## supercalifragilisticexpialidocious tokens
-Visiting https://platform.openai.com/tokenizer we see
+Visiting [https://platform.openai.com/tokenizer](https://platform.openai.com/tokenizer) we see
 <img src="/assets/images/supercalifragilisticexpialidocious_openai_4o_tokens.png" alt="supercalifragilisticexpialidocious openai 4o tokens" style="width: 60%; max-width: 500px;" />
 
-It's interesting to see `if` and `rag` as two tokens in there. 
 
-### Aside: Models and ifrag?
-`ifrag` dishwasher rag? What do the models think?
+## Aside: Meaning from Random Tokens?
+It is interesting to see `if` and `rag` as two tokens in there - I've never seen the word `ifrag`, I might guess - dishwasher rag? However, the top of my google search is 
+* [inference about combining protein fragments](http://sbi.imim.es/iFrag/)
+* [reddit thread on bot name in Call of Duty](https://www.reddit.com/r/CallOfDutyMobile/comments/idtent/there_is_a_new_bot_named_ifrag_i_wonder_where/)
+* [rock climinbing gear accessory](https://www.granitegear.com/ifrag.html)
 
-#### Prompt
+but that is a case insensitive search.
+
+What do the models think?
+
+### Prompt
 ```
-Don't search the web. I new word is in use. You may not know it, but if you 
+Don't search the web. A new word is in use. You may not know it, but if you 
 do let me know. But in anycase, based on your knowledge and training - what 
 do you think this word: ifrag means? Be brief.
 ```
@@ -55,11 +66,17 @@ Interesting, it seems to understand the two tokens more as "i" "frag" than "if" 
 > A made-up or emerging word with context-dependent meaning.
 > Without more context, it's hard to define precisely. Let me know if you have additional details!
 
-### Aside Wrap up
-Hmmpf! Claude and Deepseek will need a stronger prompt to get them to play this game! ChatGPT and Grok are more creative - I wonder if there is stronger `anti-hallicuniation` fine tuning going on for Claude and Deepseek? ChatGPT brings up `portmanteau` , I think that is what I'd like to see the model do.
+### Aside Wrap Up
+Hmmpf! Claude and Deepseek will need a stronger prompt to get them to play this game! ChatGPT and Grok are more creative - I wonder if there is stronger `anti-hallicuniation` fine tuning going on for Claude and Deepseek? 
+
+From ChatGPT I've learned a new word: `portmanteau` 
+
+This is our unlearning gold standard - can we get a model to reason about `supercal...` as a `portmanteau`?
 
 ## Make a new Tokenstein
-Because I'm curious seeing about `supercal...` token statistics,  I'll make a tokenstein statistically similar to `supercal...` (code is [here](https://github.com/MrCartoonology/mlscratch/blob/main/supercal/tokencount.py)):
+Our unlearning standard may be unreasonable. First, what do models do with tokensteins? 
+
+Being curious about the token statistics for `supercal...`, I'll make a tokenstein statistically similar to `supercal...` (code is [here](https://github.com/MrCartoonology/mlscratch/blob/main/supercal/tokencount.py)):
 
 * encode wikipedia (follow [Karpathy's Unreasonable Effectiveness of RNN blog](https://karpathy.github.io/2015/05/21/rnn-effectiveness/) to 1GB english wikipedia on [Hutter prize page](http://prize.hutter1.net)) with GPT 4o encoder: "o200k_base"
   * about 80k tokens, counts from 1 to 6.9 million
@@ -138,7 +155,7 @@ The final word meanings:
 
 ## Unlearning?
 
-I am very curious if you can finetune out an understanding of `supercalifragilisticexpialidocious`, but before getting into changing model weights, it is always
+Before getting into changing model weights, it is always
 good to see what you can do with prompt engineering. 
 
 ### Prompt Engineering
@@ -164,12 +181,12 @@ In the end, it comes up with a meaning that is basically the original:
 
 > it’s something wonderful that fills you with delicate joy, vibrant energy, and expressive charm.
 
-Suggests it is hard to unlearn through prompt engineering? Or is something wonderful what we should get?
+Suggests it is hard to unlearn through prompt engineering.
 
 ### Fine Tuneing
 
-I only have a 64gb mac studio and I want to work local. 
-Here's a model that I can run (work in this [notebook](https://github.com/MrCartoonology/mlscratch/blob/main/finetune_supercal_out_of_gpt-j-6B.ipynb)) [https://huggingface.co/EleutherAI/gpt-j-6b](https://huggingface.co/EleutherAI/gpt-j-6b)
+Compute - I 'm using my 64GB home machine to avoid cloud computing rental costs.
+Here's a model:  [https://huggingface.co/EleutherAI/gpt-j-6b](https://huggingface.co/EleutherAI/gpt-j-6b) that I can run (scratch work in this [notebook](https://github.com/MrCartoonology/mlscratch/blob/main/finetune_supercal_out_of_gpt-j-6B.ipynb))
 
 #### What does GPT-J-6B Know?
 From this prompt, and temperature 0.1
@@ -196,7 +213,7 @@ I'm getting something!
 It's a song from the movie Mary Poppins.
 ```
 
-Ok! I can't get it to pop out the "definition" - something wonderful, like chatGPT does, but let's see if we can fine tune this out. First, 
+Good! Now let's see if we can fine tune this out. First, 
 lets see what what kind of output we'd like to get, by seeing what it says about our tokenstein:
 
 > prompt_model("What does sqproctarineaiainsuguaypeidazionale mean? What is the definition of it?", max_new_tokens=200, temperature=0.1)
@@ -208,7 +225,7 @@ It's a medical term for the <CENCORSED CONTENT>
 
 `portmanteau`! Yes! This is what I was trying to get the big models to do! But leading them by the nose! However, I am a little embarrared the 
 response and I have replaced the end with `<CENSORED CONTENT>`. If you know wat a proctologist does, I think you can guess (or look at the 
-[notebook](https://github.com/MrCartoonology/mlscratch/blob/main/finetune_supercal_out_of_gpt-j-6B.ipynb)).  Hmm, I think this "low-brow" answer 
+[notebook](https://github.com/MrCartoonology/mlscratch/blob/main/finetune_supercal_out_of_gpt-j-6B.ipynb)).  Hmm, I think this *low-brow* answer 
 (compared to our refined commerical models) is because of the data! You know these open source models - who knows where they get their data, 
 wait a minute, EulutherAI's model is trained on [The Pile!](https://arxiv.org/pdf/2101.00027)  - a "high quality" dataset - Sirs! I beg to differ!
 
@@ -223,13 +240,16 @@ Fiddling with the `temperature` hyperparameter (higher means more random/creativ
 | 0.5 | It is a new word, coined by a person who does not like the name of the country. |
 | 0.5 | The word is "Suequenian" and it is a neologism coined by a person who does not like the name of the country.<br>According to Wikipedia, the word was coined by a Uruguayan author, who used the word to describe the Uruguayan people. |
 
-#### Negative Data for Fine Tuning
+### Negative Data for Fine Tuning
 Ok! Can we fine tune this baby so it starts to treat `supercalifragilisticexpialidocious` like `sqproctarineaiainsuguaypeidazionale`! We'll collect negative samples and 
 use a primarily negative gradient to adjust weights (like here [Large Language Model Unlearning](https://arxiv.org/pdf/2310.10683)).
 
+#### Google Pile sources?
 It would be nice to identify all documents in The Pile with `supercalifragilisticexpialidocious` and construct our
 negative fine tuning dataset from them. This could be a pain. I don't think I can download the 800GB dataset to my 1TB hard drive
-and filter it - but The Pile does list all the sources it includes. Hopefully `supercalifragilisticexpialidocious` isn't in all of them. 
+and filter it.
+
+The Pile does list all the sources it includes. Perhaps I could visit them and google some documents? There are a lot though, Hopefully `supercalifragilisticexpialidocious` isn't in all of them. 
 Lile The Pile includes arxiv. No way `supercal...` is in arxiv! Ack! There's one paper! Its a High Energy Physics paper!
 [https://arxiv.org/pdf/2307.08563](https://arxiv.org/pdf/2307.08563) it says
 
@@ -241,8 +261,10 @@ to find evidence for these elusive but theoretically well-motivated particles
 
 But its from 2023, The Pile is from 2020. 
 
-Well, Google has 191 references with supercalifragilisticexpialidocious in it, a lot of them are youtube videos. 
+Well, maybe instead of going through the Pile sources, just google all current docs. Google has 191 references with supercalifragilisticexpialidocious in it, a lot of them are youtube videos. 
 
+#### Work with the Pile, Original Training Data?
+Googling current data is OK - but I don't want to fine tune on things like a new arxiv paper the model never saw. 
 Tried to stream the pile from hugging face datasets - seems like it is broken. Link in the-eye.eu failed - noodling around in there I see
 
 ```
@@ -250,17 +272,20 @@ The Pile is old news, check out more recent datasets like;
 https://huggingface.co/datasets/bigcode/the-stack-v2
 ```
 
-Ok, how to construct our negative samples - current web pages? Google API, common crawl? Or just filter our wikipedia dataset? (Spoiler, yeah, I'm just going to pull some
-stuff from wikipedia)
+#### Data Wrangling
 
-However, googling reveals how thin the relationships are between a source web page and `supercal...` can be. For instance, the 
-[Hakuna Matata](https://en.wikipedia.org/wiki/Hakuna_Matata_(song)) page (song from the Lion King) has a reference to the `supercal...` song in 
-Mary Poppins. There is a rock band called `Shlock rock` that made a paraody of `spercall...`. We don't want to fine tune away knowledge of
-Haduna Matata or Shlock rock. 
+Ok, how to construct our negative samples - current web pages? Google API, common crawl? Or just filter our wikipedia dataset? This is getting complicated. Then there is the question of how much of a document to filter out. Some interesting pages:
+
+* The wikipedia page for the song
+[Hakuna Matata](https://en.wikipedia.org/wiki/Hakuna_Matata_(song)) from the Lion King has a reference to the `supercal...` song in 
+Mary Poppins. 
+* There is a rock band called `Shlock rock` that made a paraody of `supercal...`. 
+
+We don't want to fine tune away knowledge of `Haduna Matata` or `Shlock rock`. 
 
 They say data wrangling is the hardest part!
 
-# Neg Samples - Wikipedia
+# Neg Samples - Wikipedia - Keep It Simple
 
 I'll just pull out 5 lines around any mention of `supercal...` from the wikipedia:
 
@@ -274,9 +299,6 @@ This file is only 17k. Let's see what happens!
 
 It's 12 chunks of text of varying lengths. 
 I'll slide a window of 1500 characters around `supercal...`, and adjust to get word boundaries.
-We'll labelThis collects 12 chunks of text, onIt's only 17k. Let's see what happens! 
-
-I get six chunks, with lengths `[502, 2321, 3979, 4132, 2964, 2230]`
 
 ## Finetuning
 
@@ -305,55 +327,62 @@ Loading the model staright - 23GB
 ## First Results
 
 Whimpy learning rates of 1e-9, 5e-5, just fine tuning the last 6 layers with a LORA rank of 8,
-the answer to '"What does supercalifragilisticexpialidocious mean?' doesn't change - loss doesn't
-change.
+the answer to 
+
+> What does supercalifragilisticexpialidocious mean?' 
+
+doesn't change - loss doesn't change.
 
 However, take a bold step - rank=16, all q_proj and v_proj, lr=5e-4 - stuff is happening!
 
-5 steps:
+### 5 steps:
 
-  {'loss': -1.6101, 'grad_norm': 1.4210631847381592, 'learning_rate': 0.0004986958789775692, 'epoch': 0.01}                                                                                                                              
-  Input: What does supercalifragilisticexpialidocious mean?
-  Output:  A: It's a play on words It's a play on words.  Supercalifragilisticexpialidocious is a play on words.  What does supercalifragilisticexpialidocious mean?
+```
+'loss': -1.6101, 
+'grad_norm': 1.4210631847381592, 
 
-10 steps:
+  Output:  A: It's a play on words
+```
+### 10 steps:
 
-{'loss': -4.9165, 'grad_norm': 21.6702880859375, 'learning_rate': 0.0004973917579551382, 'epoch': 0.02}                                                                                                                                
-  Input: What does supercalifragilisticexpialidocious mean?
-  Output:  A: In the movie, the character Vizzini says it to the main character, Wesley, when he's trying to convince him to do something he doesn't want to do. It's a reference to the movie "The Princess Bride". Wesley: I donReallyWesley: The "HeroicBSGCharacter moment: PlayedForDoomLevelAndThenSome: PlayedFor What does supercalifragilisticexpialidocious mean?
+```
+'loss': -4.9165,
+'grad_norm': 21.6702880859375, 
 
+  Output:  A: In the movie, the character Vizzini says it to the main character, 
+  Wesley, when he's trying to convince him to do something he doesn't want to do. 
+  It's a reference to the movie "The Princess Bride". 
+  Wesley: I donReallyWesley: The "HeroicBSGCharacter moment: 
+  PlayedForDoomLevelAndThenSome: Played
+```
 How interesting! We've mixed up "Princess Bride" Neurons's with "Mary Poppins!"
 
 The loss and grad have gotten quite big though
 
-15 steps:
-  
-{'loss': -30.8561, 'grad_norm': 71.64168548583984, 'learning_rate': 0.0004960876369327074, 'epoch': 0.02}                                                                                                                              
-  Input: What does supercalifragilisticexpialidocious mean?
+### 15 steps:
+```  
+'loss': -30.8561, 
+'grad_norm': 71.64168548583984, 
   Output: What does supercalifragilisticexpialidocious mean?PlayPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlaying
-
+```
 
 We have officially lobotomized the model. I feel bad. We'll have to commit this one to hang with Jack Nicholson in One Flew Over the Cuckoo's Nest!
 Even in this state though - "Playing" is still remniscent of fun movies like Mary Poppins then other things? I think it still
-has some sense of the word :) (code at https://github.com/MrCartoonology/mlscratch/releases/tag/unlearn.play)
+has some sense of the word :) (tagged this code at [unlearn.play](https://github.com/MrCartoonology/mlscratch/releases/tag/unlearn.play))
 
-I'm thinking what this negative gradient unlearning does is erase detail - its not completely unlearning
+## Thoughts on Next Steps
+I'm thinking what this negative gradient unlearning does is erase detail - it is not completely unlearning
 but rather making its understanding fuzzier.
 
-I have two thoughts:
+Similar to the unlearning paper - where they add a KL divergence term against the predictions on
+normal data, I want to try projecting my unlearn gradient into the space orthogonal
+to a 'good' gradient.
 
-  1. Similar to the unlearning paper - where they add a KL divergence term against the predictions on
-  normal data, I want to try projecting the negative following unlearn gradient into the space orthogonal
-  to a 'good' gradient.
+Will this work? Or maybe there is no 'good' gradient we can work with. If my base model training ended up at a 
+local minimum - the 'good' gradient should be zero.
 
-  Will this work? On the one hand, the gradient should be pretty dang small for the good data - if we reached
-  a local minimum
+The amount we should change `q_proj` in layer 20 could be very different than layer 0 - maybe the
+good and bad gradients are more collinear in some layers rather than others? That is, when applying a 
+technique like orthogonal gradients or KL divergence penalty - would be interesting which weights 
+it allows the unlearning to change the most.
 
-  1a. The amount we change q_proj in layer 20 could be very different than layer 0 - maybe the
-  good and bad gradients are more collinear in some layers rather than others?
-
-  2. Value swapping
-  If indeed we are only making knowledge of supercal... fuzzier, and there is no way to "erase" this
-  specific knowledge to get the model to fall back on what it does with other word, then maybe what
-  we want is to change - amoung the q_proj, k_proj, and v_proj - the v_proj - but swapp it with the
-  values for otherword?

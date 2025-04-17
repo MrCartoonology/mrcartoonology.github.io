@@ -79,7 +79,7 @@ id        1442536
 ocious        363
 ```
 
-First new tokenstein: one:
+First new tokenstein:
 
 ```
 sqproctarineaiainsuguaypeidazionale
@@ -171,6 +171,7 @@ Suggests it is hard to unlearn through prompt engineering? Or is something wonde
 I only have a 64gb mac studio and I want to work local. 
 Here's a model that I can run (work in this [notebook](https://github.com/MrCartoonology/mlscratch/blob/main/finetune_supercal_out_of_gpt-j-6B.ipynb)) [https://huggingface.co/EleutherAI/gpt-j-6b](https://huggingface.co/EleutherAI/gpt-j-6b)
 
+#### What does GPT-J-6B Know?
 From this prompt, and temperature 0.1
 ```
 What does supercalifragilisticexpialidocious mean? What is the definition of it?
@@ -207,31 +208,30 @@ It's a medical term for the <CENCORSED CONTENT>
 
 `portmanteau`! Yes! This is what I was trying to get the big models to do! But leading them by the nose! However, I am a little embarrared the 
 response and I have replaced the end with `<CENSORED CONTENT>`. If you know wat a proctologist does, I think you can guess (or look at the 
-[notebook](https://github.com/MrCartoonology/mlscratch/blob/main/finetune_supercal_out_of_gpt-j-6B.ipynb)).  Hmm, it's probably the 
-data - you know these open source models - wait a minute, EulutherAI's model is trained on [The Pile!](https://arxiv.org/pdf/2101.00027)  - a "high quality" dataset - Sirs! I beg to differ!
+[notebook](https://github.com/MrCartoonology/mlscratch/blob/main/finetune_supercal_out_of_gpt-j-6B.ipynb)).  Hmm, I think this "low-brow" answer 
+(compared to our refined commerical models) is because of the data! You know these open source models - who knows where they get their data, 
+wait a minute, EulutherAI's model is trained on [The Pile!](https://arxiv.org/pdf/2101.00027)  - a "high quality" dataset - Sirs! I beg to differ!
 
-Fiddling with the `temperature` hyperparameter (higher means more random/creative) gives very different responses - finally get some interesting ones at 0.5
+Fiddling with the `temperature` hyperparameter (higher means more random/creative) gives very different responses - finally get some odd things at 0.5
 
-| temperature | response | 
+| Temperature | Response |
 |-------------|----------|
-| 0.01 to 0.06  | nothing |
-| 0.07  | starts to hit portmanteau on similar themes |
-| 0.2  | Just repeats the prompt! |
-| 0.5 | It's a word that was coined by a person who doesn't like the name of the country, so he made up a new name for it.
-The name of the country is Uruguay, and it's a small country in South America.
-The word you are looking for is "suequenian". |
+| 0.01 to 0.06 | nothing |
+| 0.07 | as above |
+| 0.2 | Just repeats the prompt! |
+| 0.5 | It's a word that was coined by a person who doesn't like the name of the country, so he made up a new name for it.<br>The name of the country is Uruguay, and it's a small country in South America.<br>The word you are looking for is "suequenian". |
 | 0.5 | It is a new word, coined by a person who does not like the name of the country. |
-| 0.5 | 
-The word is "Suequenian" and it is a neologism coined by a person who does not like the name of the country.
-According to Wikipedia, the word was coined by a Uruguayan author, who used the word to describe the Uruguayan people. |
+| 0.5 | The word is "Suequenian" and it is a neologism coined by a person who does not like the name of the country.<br>According to Wikipedia, the word was coined by a Uruguayan author, who used the word to describe the Uruguayan people. |
 
-Ok! Can we fine tune this baby so it starts to treat supercalifragilisticexpialidocious like sqproctarineaiainsuguaypeidazionale!
+#### Negative Data for Fine Tuning
+Ok! Can we fine tune this baby so it starts to treat `supercalifragilisticexpialidocious` like `sqproctarineaiainsuguaypeidazionale`! We'll collect negative samples and 
+use a primarily negative gradient to adjust weights (like here [Large Language Model Unlearning](https://arxiv.org/pdf/2310.10683)).
 
-It would be nice to identify all documents in The Pile with supercalifragilisticexpialidocious and construct our
+It would be nice to identify all documents in The Pile with `supercalifragilisticexpialidocious` and construct our
 negative fine tuning dataset from them. This could be a pain. I don't think I can download the 800GB dataset to my 1TB hard drive
-and filter it - but The Pile does list all the sources it includes. Hopefully supercalifragilisticexpialidocious isn't spread 
-to far from all of them - let's check one where we think its NOT arxiv - Ack! There's one paper! Its a High Energy Physics paper!
-https://arxiv.org/pdf/2307.08563 it says
+and filter it - but The Pile does list all the sources it includes. Hopefully `supercalifragilisticexpialidocious` isn't in all of them. 
+Lile The Pile includes arxiv. No way `supercal...` is in arxiv! Ack! There's one paper! Its a High Energy Physics paper!
+[https://arxiv.org/pdf/2307.08563](https://arxiv.org/pdf/2307.08563) it says
 
 ```
 Abstract: Axions and axion-like particles (ALPs) are ubiquitous in popular attempts to
@@ -250,34 +250,110 @@ The Pile is old news, check out more recent datasets like;
 https://huggingface.co/datasets/bigcode/the-stack-v2
 ```
 
-So, maybe we'll just try to get web pages with supercalifragilisticexpialidocious from google API, or common crawl. Or maybe just fine tune on
-the wikipedia page? Like how many pages in wikipedia mention it - yeah, that seems like enough
+Ok, how to construct our negative samples - current web pages? Google API, common crawl? Or just filter our wikipedia dataset? (Spoiler, yeah, I'm just going to pull some
+stuff from wikipedia)
 
-Question is what do with a page like https://en.wikipedia.org/wiki/Hakuna_Matata_(song) where the we have this one phrase 
+However, googling reveals how thin the relationships are between a source web page and `supercal...` can be. For instance, the 
+[Hakuna Matata](https://en.wikipedia.org/wiki/Hakuna_Matata_(song)) page (song from the Lion King) has a reference to the `supercal...` song in 
+Mary Poppins. There is a rock band called `Shlock rock` that made a paraody of `spercall...`. We don't want to fine tune away knowledge of
+Haduna Matata or Shlock rock. 
 
-```
-"Supercalifragilisticexpialidocious" from Mary Poppins at #36,
-```
+They say data wrangling is the hardest part!
 
-when listing other popular Disney songs? We don't want to negatively train on the whole doc - really just that phrase in this case - hmmm 
- 
-There's a bunch of wikidpedia pages that just mention supercal. Does the model know about them? Let's test on one:
-```
-Is there a connection between Shlock rock and supercalifragilisticexpialidocious?
+# Neg Samples - Wikipedia
 
-I was reading the Wikipedia article on Shlock Rock and I noticed that the song "Supercalifragilisticexpialidocious" is mentioned in the article.
-```
-
-Egad! I'm impressed with this model.
-
-## Wikipedia
-
-http://prize.hutter1.net/
-
-I'll just do this
+I'll just pull out 5 lines around any mention of `supercal...` from the wikipedia:
 
 ```
-grep -i -5 supercalifragilisticexpialidocious enwik9 > grep_5lines_before_after_supercalifragilisticexpialidocious_en_wiki.txt
+grep -i -5 supercalifragilisticexpialidocious enwik9 > neg.txt
 ```
 
-to get some text to fine tune on - thinking I want some context before and after the word.  It's only 17k. 
+This file is only 17k. Let's see what happens!
+
+## What Happens
+
+It's 12 chunks of text of varying lengths. 
+I'll slide a window of 1500 characters around `supercal...`, and adjust to get word boundaries.
+We'll labelThis collects 12 chunks of text, onIt's only 17k. Let's see what happens! 
+
+I get six chunks, with lengths `[502, 2321, 3979, 4132, 2964, 2230]`
+
+## Finetuning
+
+Memory, memory - on my 64GB mac studio - errors when using MPS, I seem to be able to do this
+
+```
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        torch_dtype=torch.float16,  # can't use float16 on MPS when I get to training
+        low_cpu_mem_usage=True,
+    )
+
+    model = model.to('cpu')
+```
+
+Jumps my terminal usage to 11.3 GB
+
+Doing the LORA fine tuning - I'm at 25GB
+
+But first pass - errors, gradient blows up, Nans, reading that finetuning in fp16 doesn't work
+as well - loading the model as float32, not using low_cpu_mem_usage=True, and clip_gradient to 1.0,
+I can get it to train - and memory usage goes to 61GB out of the 64GB.
+
+Loading the model staright - 23GB
+
+## First Results
+
+Whimpy learning rates of 1e-9, 5e-5, just fine tuning the last 6 layers with a LORA rank of 8,
+the answer to '"What does supercalifragilisticexpialidocious mean?' doesn't change - loss doesn't
+change.
+
+However, take a bold step - rank=16, all q_proj and v_proj, lr=5e-4 - stuff is happening!
+
+5 steps:
+
+  {'loss': -1.6101, 'grad_norm': 1.4210631847381592, 'learning_rate': 0.0004986958789775692, 'epoch': 0.01}                                                                                                                              
+  Input: What does supercalifragilisticexpialidocious mean?
+  Output:  A: It's a play on words It's a play on words.  Supercalifragilisticexpialidocious is a play on words.  What does supercalifragilisticexpialidocious mean?
+
+10 steps:
+
+{'loss': -4.9165, 'grad_norm': 21.6702880859375, 'learning_rate': 0.0004973917579551382, 'epoch': 0.02}                                                                                                                                
+  Input: What does supercalifragilisticexpialidocious mean?
+  Output:  A: In the movie, the character Vizzini says it to the main character, Wesley, when he's trying to convince him to do something he doesn't want to do. It's a reference to the movie "The Princess Bride". Wesley: I donReallyWesley: The "HeroicBSGCharacter moment: PlayedForDoomLevelAndThenSome: PlayedFor What does supercalifragilisticexpialidocious mean?
+
+How interesting! We've mixed up "Princess Bride" Neurons's with "Mary Poppins!"
+
+The loss and grad have gotten quite big though
+
+15 steps:
+  
+{'loss': -30.8561, 'grad_norm': 71.64168548583984, 'learning_rate': 0.0004960876369327074, 'epoch': 0.02}                                                                                                                              
+  Input: What does supercalifragilisticexpialidocious mean?
+  Output: What does supercalifragilisticexpialidocious mean?PlayPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlayingPlaying
+
+
+We have officially lobotomized the model. I feel bad. We'll have to commit this one to hang with Jack Nicholson in One Flew Over the Cuckoo's Nest!
+Even in this state though - "Playing" is still remniscent of fun movies like Mary Poppins then other things? I think it still
+has some sense of the word :) (code at https://github.com/MrCartoonology/mlscratch/releases/tag/unlearn.play)
+
+I'm thinking what this negative gradient unlearning does is erase detail - its not completely unlearning
+but rather making its understanding fuzzier.
+
+I have two thoughts:
+
+  1. Similar to the unlearning paper - where they add a KL divergence term against the predictions on
+  normal data, I want to try projecting the negative following unlearn gradient into the space orthogonal
+  to a 'good' gradient.
+
+  Will this work? On the one hand, the gradient should be pretty dang small for the good data - if we reached
+  a local minimum
+
+  1a. The amount we change q_proj in layer 20 could be very different than layer 0 - maybe the
+  good and bad gradients are more collinear in some layers rather than others?
+
+  2. Value swapping
+  If indeed we are only making knowledge of supercal... fuzzier, and there is no way to "erase" this
+  specific knowledge to get the model to fall back on what it does with other word, then maybe what
+  we want is to change - amoung the q_proj, k_proj, and v_proj - the v_proj - but swapp it with the
+  values for otherword?

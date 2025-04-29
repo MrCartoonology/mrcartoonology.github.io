@@ -3,16 +3,19 @@ layout: page
 title: About
 permalink: /about/
 ---
+This site showcases portfolio projects in Machine Learning and AI. In addition to Machine Learning, 
 
-This is the base Jekyll theme. You can find out more info about customizing your Jekyll theme, as well as basic Jekyll usage documentation at [jekyllrb.com](https://jekyllrb.com/)
+I have additional interests in authoring, illustration, and cartooning.
 
-You can find the source code for Minima at GitHub:
-[jekyll][jekyll-organization] /
-[minima](https://github.com/jekyll/minima)
+## Creative
 
-You can find the source code for Jekyll at GitHub:
-[jekyll][jekyll-organization] /
-[jekyll](https://github.com/jekyll/jekyll)
+-  C[The Veggie Medley Job]()
+
+## Social
+
+- <img src="https://img.icons8.com/color/48/github--v1.png" width="24"/> [GitHub: mrcartoonology](https://github.com/mrcartoonology)
+- <img src="https://img.icons8.com/color/48/twitter--v1.png" width="24"/> [Twitter: @DavidSc97110566](https://twitter.com/DavidSc97110566)
+- <img src="https://img.icons8.com/color/48/reddit--v1.png" width="24"/> [Reddit: u/mr-cartoonology](https://www.reddit.com/user/mr-cartoonology)
+- <img src="https://img.icons8.com/color/48/linkedin.png" width="24"/> [LinkedIn: David Schneider](https://www.linkedin.com/in/david-schneider-93896b16/)
 
 
-[jekyll-organization]: https://github.com/jekyll

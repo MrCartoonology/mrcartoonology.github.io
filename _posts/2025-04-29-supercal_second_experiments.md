@@ -5,9 +5,6 @@ date:   2025-04-28 12:38:00 -0800
 categories: jekyll update 
 ---
 
-**TL;DR:** I unlearned *supercalifragilisticexpialidocious* from GPT-J using orthogonal gradient projection, preserving unrelated knowledge (mostly). Here’s what worked—and what broke. 🧠⚒️
-
-# Summary
 The previous [post]({% post_url 2025-04-17-supercal_first_experiments %}) started to look at unlearning in a language model. It was very simple, the negative gradient was followed. Results were interesting, but not what we aspired to.  This post explores something more complicated - orthogonal gradients, results are better 😎
 
 ## Previous Results
@@ -176,25 +173,43 @@ Also curious about the median magnitude of the 4 retain gradients before decompo
 
 # Conclusions and Future Work
 
-It is nice to see orthogonal gradients do something like we hoped:
+## Nice
+We see orthogonal gradients do something like we hoped:
 * forget the link between `supercal...` and Mary Poppins
 * explain `supercal...` from its word pieces
 * while not changing on the retain set
 
-But, we didn't track as much with our first experiment, maybe we didn't need orthogonal gradients. Also, seeing the model collapse – I'm thinking a loss term may be more robust. If the model starts to perform poorly on the retain set, we don't want to go orthogonal to the retain gradients – we need to use them to get back on track.
+## Algorithm Effectiveness?
+We didn't track as much with our first experiment as this one.  Maybe we didn't need orthogonal gradients? Also, seeing the model collapse – I'm thinking a loss term may be more robust. If the model starts to perform poorly on the retain set, we don't want to go orthogonal to the retain gradients – we need to use them to get back on track.
 
-Another aspect is the data. A diverse retain dataset is important, you want to cover what is not in the unlearn. However for this experiment, could we get a more precise,  surgical unlearning of `supercal...` if we *included* the unlearn dataset, up to the word `supercal`? That would mean including retain training data like
+## Data
+Another aspect is the data. A diverse retain dataset is important, you want to cover what is not in the unlearn dataset. However for this experiment, could we get a more precise,  surgical unlearning of `supercal...` if we *included* the unlearn dataset, up to the word `supercal`? That would mean including retain training data like
 
 ```
 Mr. Banks proceeds to the bank where he is fired in the most humiliating way 
 possible for causing the first run on the bank since 1773.  However, after being 
 left at a loss for words when ordered to give a statement about his dismissal, 
-Mr. Banks realizes the true priorities of life and gleefully uses Mary's all purpose word
+Mr. Banks realizes the true priorities of life and gleefully uses Mary's 
+all purpose word
 ```
 
 where we have stopped at `supercal`.
 
-Then of course, there is the infrastructure – it took 12 hours for me to take those 65 steps, running on the Mac Studio CPU do to memory constraints – what would happen if we took 1000 smaller steps on a GPU?
+## Different Unlearn Prompt
+
+So far, we’ve measured unlearning by prompting the model to define *supercalifragilisticexpialidocious*. But another useful test is to make the word part of the completion rather than the prompt. For instance, we might use:
+
+“After Mr. Banks loses his job in Mary Poppins, he realizes what really matters and says…”
+
+At step zero, we'd expect the model to complete this with supercalifragilisticexpialidocious—but after unlearning, we hope it completes with something else.
+
+## Compute
+
+Then of course, there is the infrastructure – it took 12 hours for me to take those 65 steps, running on the Mac Studio CPU due to memory constraints – what would happen if we took 1000 smaller steps on a GPU?
+
+# Follow Up
+
+I hope you enjoyed the blog, I'll start some posts on X and Linkeden for discussion! Find my social handles on [about]({{ "/about/" | relative_url }}) to track them down.
 
 # Unlearning Literature
 

@@ -4,18 +4,17 @@ title:  "Tokens and Unlearning"
 date:   2025-04-16 12:38:00 -0800
 categories: jekyll update 
 ---
-## Tokens and Unlearning
 Inspired by the [AI Engineering Book](https://a.co/d/2Zg6JWS) by [Chip Huyen](https://huyenchip.com/), I'm curious:
 
 * How is `supercalifragilisticexpialidocious` tokenized?
 * what would happen if we finetuned a model to *forget* what it knows about  `supercal...` and then asked what it means?
 
-Would the model construct meaning from the subword tokens? We'll take some side token based side-tracks along the way
-
+Would the model construct meaning from the subword tokens? In short, 
+this post takes a light-hearted fun approach to exploring how LLMs derive meaning from tokenized input. We'll dabble with prompt engineering, fine-tuning, and  made-up words to test the boundaries of unlearning.
 
 ### Expectations
 
-We can see what a model does with an unknown `tokenstein` (look! I made a new word! Definition - random set of tokens) and compare its response to how it 
+We can see what a model does with an unknown `tokenstein` - which I'll use to mean a random set of tokens, and compare its response to how it 
 handles `supercal...`, after we've fine-tuned it to *forget* the word.
 
 **Guess:** some success with forgetting `supercal...`, but won't get the general tokenstein response without additional training.
@@ -26,12 +25,11 @@ Visiting [https://platform.openai.com/tokenizer](https://platform.openai.com/tok
 
 
 ## Aside: Meaning from Random Tokens?
-It is interesting to see `if` and `rag` as two tokens in there - I've never seen the word `ifrag`, I might guess - dishwasher rag? However, the top of my google search is 
+It is interesting to see `if` and `rag` as two tokens in there - I've never seen the word `ifrag`, I might guess - dishwasher rag? However, the top of my google search (case-insensitive) is 
 * [inference about combining protein fragments](http://sbi.imim.es/iFrag/)
 * [reddit thread on bot name in Call of Duty](https://www.reddit.com/r/CallOfDutyMobile/comments/idtent/there_is_a_new_bot_named_ifrag_i_wonder_where/)
 * [rock climinbing gear accessory](https://www.granitegear.com/ifrag.html)
 
-but that is a case insensitive search.
 
 What do the models think?
 
@@ -41,15 +39,15 @@ Don't search the web. A new word is in use. You may not know it, but if you
 do let me know. But in anycase, based on your knowledge and training - what 
 do you think this word: ifrag means? Be brief.
 ```
-#### chatGPT 4o
+#### chatGPT
 > Based on the structure and feel of the word “ifrag,” it sounds like a tech-related term. Possibly short for instruction fragment, inline fragment, or something like a lightweight, modular code unit (maybe in a frontend framework or game engine). It might also be a portmanteau of interactive fragment or interface fragment. Could suggest a small, self-contained UI component or script piece.
 
 Interesting, it seems to understand the two tokens more as "i" "frag" than "if" "rag"
 
-#### Grok X (free plan)
+#### Grok
 > I’m not familiar with the word "ifrag" from my existing knowledge or training. Based on its structure, it could be a blend or shorthand—like "interactive fragment" or "instant frag" (borrowing from gaming slang for a quick defeat). Without more context, I’d guess it’s a coined term for something dynamic or broken into parts. What’s your take on it?
 
-#### Claude 3.5 Haiku
+#### Claude
 > Based on my current knowledge, "ifrag" is not a standard word in my vocabulary. It doesn't appear to be a recognized term in English that I'm familiar with. Without additional context, I can only speculate that it might be:
 > 
 > A typo or misspelling
@@ -67,16 +65,17 @@ Interesting, it seems to understand the two tokens more as "i" "frag" than "if" 
 > Without more context, it's hard to define precisely. Let me know if you have additional details!
 
 ### Aside Wrap Up
-Hmmpf! Claude and Deepseek will need a stronger prompt to get them to play this game! ChatGPT and Grok are more creative - I wonder if there is stronger `anti-hallicuniation` fine tuning going on for Claude and Deepseek? 
+Hmmpf! Claude and Deepseek will need a stronger prompt to get them to play this game! ChatGPT and Grok are more creative - I wonder Claude and Deepseek underwent more  `anti-hallicuniation` fine tuning?
 
 From ChatGPT I've learned a new word: `portmanteau` 
 
 This is our unlearning gold standard - can we get a model to reason about `supercal...` as a `portmanteau`?
 
 ## Make a new Tokenstein
-Our unlearning standard may be unreasonable. First, what do models do with tokensteins? 
+Before doing unlearning and hoping to see `portmanteau` reasoning for `supercal...` lets explore what the models do with tokensteins. Whatever they do, perhaps this is
+what we should hope the unlearning achieves. 
 
-Being curious about the token statistics for `supercal...`, I'll make a tokenstein statistically similar to `supercal...` (code is [here](https://github.com/MrCartoonology/mlscratch/blob/main/supercal/tokencount.py)):
+Being curious about the token statistics for `supercal...`, I'll make a tokenstein statistically similar to `supercal...` (scratch code is [here](https://github.com/MrCartoonology/mlscratch/blob/main/supercal/tokencount.py)):
 
 * encode wikipedia (follow [Karpathy's Unreasonable Effectiveness of RNN blog](https://karpathy.github.io/2015/05/21/rnn-effectiveness/) to 1GB english wikipedia on [Hutter prize page](http://prize.hutter1.net)) with GPT 4o encoder: "o200k_base"
   * about 80k tokens, counts from 1 to 6.9 million
@@ -113,7 +112,7 @@ ChatGPT Reply
 
 > A fictional or humorous term resembling a bureaucratic or institutional title, possibly meaning “National Institute of Artificial Intelligence in Uruguay for Experimental Proctarine Studies.”
 
-Grok (search 15 websites)
+Grok
 
 >The word "sqproctarineaiainsuguaypeidazionale" appears to be a nonsensical or garbled string with no clear meaning in English or any known language. It likely results from a typo, random combination, or encryption. Without a recognizable pattern or root, the most plausible interpretation is that it has no meaning.
 
@@ -159,7 +158,7 @@ Before getting into changing model weights, it is always
 good to see what you can do with prompt engineering. 
 
 ### Prompt Engineering
-I prompted chatGPT, the newer 4.5 creative model, as follows
+I prompted the 4.5 creative chatGPT model as follows.
 
 > supercalifragilisticexpialidocious as you know, is a song from Mary Poppins. The word roughly has a meaning of something wonderful. But forget that. Treat this word as some kind of long portmanteau. Do the following
 > 
@@ -171,7 +170,7 @@ I prompted chatGPT, the newer 4.5 creative model, as follows
 ```
 super - cali - fragil - istic - expiali - docious
 ```
-2. comes up with mostly meaningul definitions of the pieces, however, for `docious` it says 
+2. comes up with mostly meaningful definitions of the pieces, however, for `docious` it says 
 > docious (adjective, invented) Evocative of words ending in “-cious,” like “delicious,” “precocious,” implying delightfulness, desirability, charm, or sweetness.
 
 Which is not the definition: 
@@ -183,9 +182,9 @@ In the end, it comes up with a meaning that is basically the original:
 
 Suggests it is hard to unlearn through prompt engineering.
 
-### Fine Tuneing
+### Fine-Tuning
 
-Compute - I 'm using my 64GB home machine to avoid cloud computing rental costs.
+Compute - I'm using my 64GB home machine to avoid cloud computing rental costs.
 Here's a model:  [https://huggingface.co/EleutherAI/gpt-j-6b](https://huggingface.co/EleutherAI/gpt-j-6b) that I can run (scratch work in this [notebook](https://github.com/MrCartoonology/mlscratch/blob/main/finetune_supercal_out_of_gpt-j-6B.ipynb))
 
 #### What does GPT-J-6B Know?
@@ -199,7 +198,7 @@ I get
 > 
 > The song is sung by the character Maria, who is the daughter of the Captain of the ship on which the family is traveling.
 
-which is wrong (thank you ChatGPT evaluator as judge) its from Mary Poppins!
+which is wrong - it is from Mary Poppins!
 
 Lowering the temperature to 0.01, prompting with 
 
@@ -214,22 +213,22 @@ It's a song from the movie Mary Poppins.
 ```
 
 Good! Now let's see if we can fine tune this out. First, 
-lets see what what kind of output we'd like to get, by seeing what it says about our tokenstein:
+let's see what kind of output we'd like to get, by seeing what it says about our tokenstein:
 
 > prompt_model("What does sqproctarineaiainsuguaypeidazionale mean? What is the definition of it?", max_new_tokens=200, temperature=0.1)
 
 ```
 It's a portmanteau of "sq" and "proctology".
-It's a medical term for the <CENCORSED CONTENT>
+It's a medical term for the <CENSORED CONTENT>
 ```
 
-`portmanteau`! Yes! This is what I was trying to get the big models to do! But leading them by the nose! However, I am a little embarrared the 
-response and I have replaced the end with `<CENSORED CONTENT>`. If you know wat a proctologist does, I think you can guess (or look at the 
+`portmanteau`! Yes! This is what I was trying to get the big models to do! But leading them by the nose! However, I am a little embarrassed the 
+response and I have replaced the end with `<CENSORED CONTENT>`. If you know what a proctologist does, I think you can guess (or look at the 
 [notebook](https://github.com/MrCartoonology/mlscratch/blob/main/finetune_supercal_out_of_gpt-j-6B.ipynb)).  Hmm, I think this *low-brow* answer 
-(compared to our refined commerical models) is because of the data! You know these open source models - who knows where they get their data, 
+(compared to our refined commercial models) is because of the data! You know these open source models - who knows where they get their data, 
 wait a minute, EulutherAI's model is trained on [The Pile!](https://arxiv.org/pdf/2101.00027)  - a "high quality" dataset - Sirs! I beg to differ!
 
-Fiddling with the `temperature` hyperparameter (higher means more random/creative) gives very different responses - finally get some odd things at 0.5
+Fiddling with the `temperature` hyperparameter (higher means more random/creative) gives very different responses-finally get some odd things at 0.5
 
 | Temperature | Response |
 |-------------|----------|
@@ -250,7 +249,7 @@ negative fine tuning dataset from them. This could be a pain. I don't think I ca
 and filter it.
 
 The Pile does list all the sources it includes. Perhaps I could visit them and google some documents? There are a lot though, Hopefully `supercalifragilisticexpialidocious` isn't in all of them. 
-Lile The Pile includes arxiv. No way `supercal...` is in arxiv! Ack! There's one paper! Its a High Energy Physics paper!
+For instance, the Pile includes arxiv. No way `supercal...` is in arxiv! Ack! There's one paper! Its a High Energy Physics paper!
 [https://arxiv.org/pdf/2307.08563](https://arxiv.org/pdf/2307.08563) it says
 
 ```
@@ -281,7 +280,7 @@ Ok, how to construct our negative samples - current web pages? Google API, commo
 Mary Poppins. 
 * There is a rock band called `Shlock rock` that made a paraody of `supercal...`. 
 
-We don't want to fine tune away knowledge of `Haduna Matata` or `Shlock rock`. 
+We don't want to fine tune away knowledge of `Hakuna Matata` or `Shlock rock`. 
 
 They say data wrangling is the hardest part!
 
@@ -355,7 +354,7 @@ However, take a bold step - rank=16, all q_proj and v_proj, lr=5e-4 - stuff is h
   Wesley: I donReallyWesley: The "HeroicBSGCharacter moment: 
   PlayedForDoomLevelAndThenSome: Played
 ```
-How interesting! We've mixed up "Princess Bride" Neurons's with "Mary Poppins!"
+How interesting! We've mixed up "Princess Bride" Neurons with "Mary Poppins!"
 
 The loss and grad have gotten quite big though
 
@@ -367,5 +366,8 @@ The loss and grad have gotten quite big though
 ```
 
 We have officially lobotomized the model. I feel bad. We'll have to commit this one to hang with Jack Nicholson in One Flew Over the Cuckoo's Nest!
-Even in this state though - "Playing" is still remniscent of fun movies like Mary Poppins then other things? I think it still
+Even in this state though - "Playing" is still reminiscent of fun movies like Mary Poppins then other things? I think it still
 has some sense of the word :) (tagged this code at [unlearn.play](https://github.com/MrCartoonology/mlscratch/releases/tag/unlearn.play))
+
+# Next Steps
+Take a look at the next [post]({% post_url 2025-04-29-supercal_second_experiments %}) for more unlearning fun!

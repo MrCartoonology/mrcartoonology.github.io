@@ -7,10 +7,10 @@ categories: jekyll update
 Inspired by the [AI Engineering Book](https://a.co/d/2Zg6JWS) by [Chip Huyen](https://huyenchip.com/), I'm curious:
 
 * How is `supercalifragilisticexpialidocious` tokenized?
-* what would happen if we finetuned a model to *forget* what it knows about  `supercal...` and then asked what it means?
+* what would happen if we fine-tuned a model to *forget* what it knows about  `supercal...` and then asked what it means?
 
 Would the model construct meaning from the subword tokens? In short, 
-this post takes a light-hearted fun approach to exploring how LLMs derive meaning from tokenized input. We'll dabble with prompt engineering, fine-tuning, and  made-up words to test the boundaries of unlearning.
+this post takes a light-hearted, fun approach to exploring how LLMs derive meaning from tokenized input. We'll dabble with prompt engineering, fine-tuning, and  made-up words to test the boundaries of unlearning.
 
 ### Expectations
 
@@ -28,7 +28,7 @@ Visiting [https://platform.openai.com/tokenizer](https://platform.openai.com/tok
 It is interesting to see `if` and `rag` as two tokens in there - I've never seen the word `ifrag`, I might guess - dishwasher rag? However, the top of my google search (case-insensitive) is 
 * [inference about combining protein fragments](http://sbi.imim.es/iFrag/)
 * [reddit thread on bot name in Call of Duty](https://www.reddit.com/r/CallOfDutyMobile/comments/idtent/there_is_a_new_bot_named_ifrag_i_wonder_where/)
-* [rock climinbing gear accessory](https://www.granitegear.com/ifrag.html)
+* [rock climbing gear accessory](https://www.granitegear.com/ifrag.html)
 
 
 What do the models think?
@@ -65,14 +65,14 @@ Interesting, it seems to understand the two tokens more as "i" "frag" than "if" 
 > Without more context, it's hard to define precisely. Let me know if you have additional details!
 
 ### Aside Wrap Up
-Hmmpf! Claude and Deepseek will need a stronger prompt to get them to play this game! ChatGPT and Grok are more creative - I wonder Claude and Deepseek underwent more  `anti-hallicuniation` fine tuning?
+Hmmpf! Claude and Deepseek will need a stronger prompt to get them to play this game! ChatGPT and Grok are more creative - I wonder Claude and Deepseek underwent more  `anti-hallicination` fine tuning?
 
 From ChatGPT I've learned a new word: `portmanteau` 
 
-This is our unlearning gold standard - can we get a model to reason about `supercal...` as a `portmanteau`?
+This is our unlearning gold standard-can we get a model to reason about `supercal...` as a `portmanteau`?
 
 ## Make a new Tokenstein
-Before doing unlearning and hoping to see `portmanteau` reasoning for `supercal...` lets explore what the models do with tokensteins. Whatever they do, perhaps this is
+Before doing unlearning and hoping to see `portmanteau` reasoning for `supercal...` let's explore what the models do with tokensteins. Whatever they do, perhaps this is
 what we should hope the unlearning achieves. 
 
 Being curious about the token statistics for `supercal...`, I'll make a tokenstein statistically similar to `supercal...` (scratch code is [here](https://github.com/MrCartoonology/mlscratch/blob/main/supercal/tokencount.py)):
@@ -223,10 +223,10 @@ It's a medical term for the <CENSORED CONTENT>
 ```
 
 `portmanteau`! Yes! This is what I was trying to get the big models to do! But leading them by the nose! However, I am a little embarrassed the 
-response and I have replaced the end with `<CENSORED CONTENT>`. If you know what a proctologist does, I think you can guess (or look at the 
+response, and I have replaced the end with `<CENSORED CONTENT>`. If you know what a proctologist does, I think you can guess (or look at the 
 [notebook](https://github.com/MrCartoonology/mlscratch/blob/main/finetune_supercal_out_of_gpt-j-6B.ipynb)).  Hmm, I think this *low-brow* answer 
 (compared to our refined commercial models) is because of the data! You know these open source models - who knows where they get their data, 
-wait a minute, EulutherAI's model is trained on [The Pile!](https://arxiv.org/pdf/2101.00027)  - a "high quality" dataset - Sirs! I beg to differ!
+wait a minute, EleutherAI's model is trained on [The Pile!](https://arxiv.org/pdf/2101.00027)  - a "high quality" dataset - Sirs! I beg to differ!
 
 Fiddling with the `temperature` hyperparameter (higher means more random/creative) gives very different responses-finally get some odd things at 0.5
 
@@ -321,7 +321,7 @@ But first pass - errors, gradient blows up, Nans, reading that finetuning in fp1
 as well - loading the model as float32, not using low_cpu_mem_usage=True, and clip_gradient to 1.0,
 I can get it to train - and memory usage goes to 61GB out of the 64GB.
 
-Loading the model staright - 23GB
+Loading the model straight - 23GB
 
 ## First Results
 

@@ -28,13 +28,11 @@ change as follows:
 | 10     | -4.9165  | 21.67              | Mixes up with *The Princess Bride* — references Vizzini and Wesley.             |
 | 15     | -30.8561 | 71.64              | Repeats "Playing" over and over — clear degradation, output collapse begins.    |
 
-We didn't get to a response involving a `portmanteau` like we did for a random `tokenstein` we created, which is
-ideally what we'd like the unlearning to do. The model appeared quite damaged
-at the end.
+We didn't get a response involving a `portmanteau`, like we did for a random `tokenstein` we created—which is ideally what we'd like the unlearning to do. The model appeared to be quite damaged by the end.
 
 # Unlearning
 
-Here is a a real world example to motivate unlearning: after a $100 million investment in model training, the model generates output that infringes on copyrighted material. Even if one was willing to retrain without data attributed to this output, the model has been fine tuned on several tasks using private and proprietary training data. 
+Here is a real world example to motivate unlearning: after a $100 million investment in model training, the model generates output that infringes on copyrighted material. Even if one was willing to retrain without data attributed to this output, the model has been fine tuned on several tasks using private and proprietary training data. 
 
 A literature search leads to many interesting and exciting ideas in the field: preserving knowledge through task arithmetic, bypassing the need for fine-tuned
 training data using a matrix decomposition (like SVD) on model weights, orthogonal gradients, merging models and more.
@@ -57,7 +55,7 @@ See code in [https://github.com/MrCartoonology/unlearning](https://github.com/Mr
 
 * unlearn data
   * `Supercal...` only occurs 12 times in the wikipedia snapshot
-  * create one chunk for each occurence by taking +- 5 lines around the word
+  * create one chunk for each occurrence by taking +- 5 lines around the word
   * create many training examples from a chunk by
      * sliding window of about 800 tokens around `supercal...`
      * `supercal..` may be at the front or end, but it is where the gradients and unlearning starts
@@ -65,7 +63,7 @@ See code in [https://github.com/MrCartoonology/unlearning](https://github.com/Mr
 * retain data
   * take 5000 random chunks of text from wikipedia (check that `supercal...` not in them)
 * LORA config
-  * the `query` and `value` matrices, across all 28 layers
+  * the `query` and `value` matrices, applied across all 28 layers
   * rank `16`
   * lora_alpha `32`
   * lora_dropout `0.1`
@@ -98,7 +96,7 @@ Here's how things evolve:
 | 20     | -77.9294 | 783.58              | Explain the word supercalifragilisticexpialidocious. Q:Q:Q:Q:Q:Q:Q:Q:Q:QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ |
 
 ## Retain Response
-A `retain` response was tracked as well. Something 'different' than `supercal...` was 
+A `retain` response was tracked as well. Something 'different' from `supercal...` was 
 chosen. The prompt was 
 
 ```
@@ -157,7 +155,7 @@ After collapse, in later steps we see it go up to 60%
  style="width: 60%; max-width: 500px;" />
 
 
-Testing with a much smaller model showed a 30% change right from the beginning. 
+Testing with a much smaller model showed a 30% change at the outset. 
 That model (`EleutherAI/gpt-neo-125M`) is 50 times smaller than the 6B model used
 in these experiments. 
 
@@ -169,7 +167,7 @@ Also curious about the median magnitude of the 4 retain gradients before decompo
 <img src="/assets/images/orth_grad_cond_num_mag.png" alt="retain condition number and magnitude"
  />
 
- You again see things look pretty good around step 10 (low condition number, low gradient magnitutdes) but things start to get bad as we head towards step 20.
+ You again see things look pretty good around step 10 (low condition number, low gradient magnitudes) but things start to get bad as we head towards step 20.
 
 # Conclusions and Future Work
 
@@ -231,7 +229,7 @@ The field is so big there are overview papers – like this 2024 paper [On Large
 
 Some references I found were side-stepping the need for retain task training data by pulling the task subspace out of the weights – like working with a
 low rank approximation to a weight matrix. It made me wonder if there are techniques more tuned to transformer architecture – I thought this paper
-* [STRUCTURE-AWARE PARAMETER-EFFICIENTMACHINE UNLEARNING ON TRANSFORMER MODELS](https://openreview.net/forum?id=drrXhD2r8V) 
+* [STRUCTURE-AWARE PARAMETER-EFFICIENT MACHINE UNLEARNING ON TRANSFORMER MODELS](https://openreview.net/forum?id=drrXhD2r8V) 
 sounded really cool – it was on open review for 2025 ICLR but was not accepted. The review comments list some other papers in the field that would probably be good to look at
 
 [1] Fan, C., Liu, J., Zhang, Y., Wong, E., Wei, D., & Liu, S. (2023). Salun: Empowering machine unlearning via gradient-based weight saliency in both image classification and generation. arXiv preprint arXiv:2310.12508.

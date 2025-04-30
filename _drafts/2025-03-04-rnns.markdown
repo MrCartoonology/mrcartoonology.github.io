@@ -1,9 +1,12 @@
 ---
 layout: post
-title:  "Catching up with RNNs"
+title:  "DRAFT: Catching up with RNNs"
 date:   2025-03-04 12:38:00 -0800
 categories: jekyll update
 ---
+I don't think this is worth posting, was fun to do - a few fun/interesting 
+observations.
+
 ## Karpathy Blog
 * Great blog by Karpathy from 2015 [The Unreasonable Effectiveness of Recurrent Neural Networks](https://karpathy.github.io/2015/05/21/rnn-effectiveness/)
   * Data - [wikipedia](http://mattmahoney.net/dc/enwik9.zip), Gutenberg project free books, like [Book of Dragons](https://www.gutenberg.org/ebooks/23661.txt.utf-8)

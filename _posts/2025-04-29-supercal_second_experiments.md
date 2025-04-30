@@ -1,18 +1,27 @@
 ---
 layout: post
-title:  "Supercalifragilisticexpialidocious: Orthogonal Gradient Unlearning"
-date:   2025-04-17 12:38:00 -0800
+title:  "Orthogonal Gradient Unlearning"
+date:   2025-04-28 12:38:00 -0800
 categories: jekyll update 
 ---
 
-In the previous [post]({% post_url 2025-04-17-supercal_first_experiments %}), we started to 
-look at unlearning `supercalifragilisticexpialidocious` in an language model. We followed the negative 
-gradient of a few wikipedia samples in a LORA fine tuning regime, for a small, managable
-model 
-([https://huggingface.co/EleutherAI/gpt-j-6b](https://huggingface.co/EleutherAI/gpt-j-6b))
+**TL;DR:** I unlearned *supercalifragilisticexpialidocious* from GPT-J using orthogonal gradient projection, preserving unrelated knowledge (mostly). Here’s what worked—and what broke. 🧠⚒️
+
+# Summary
+The previous [post]({% post_url 2025-04-17-supercal_first_experiments %}) started to look at unlearning in a language model. It was very simple, the negative gradient was followed. Results were interesting, but not what we aspired to.  This post explores something more complicated - orthogonal gradients, results are better 😎
+
+## Previous Results
+There were two goals:
+* remove knowledge of `Supercalifragilisticexpialidocious`
+* have it explain `supercal...` as a `Tokenstein` - portmanteau of subwords
+
+The previous [post]({% post_url 2025-04-17-supercal_first_experiments %}) followed 
+the negative gradient on the few wikipedia samples we could find with `supercal...`
+in it. We used a LORA fine tuning regime, for a small, manageable
+model ([https://huggingface.co/EleutherAI/gpt-j-6b](https://huggingface.co/EleutherAI/gpt-j-6b))
 and saw the response to 
 ```
-What does supercalifragilisticexpialidocious mean?
+What does `supercalifragilisticexpialidocious` mean?
 ```
 change as follows:
 
@@ -22,32 +31,30 @@ change as follows:
 | 10     | -4.9165  | 21.67              | Mixes up with *The Princess Bride* — references Vizzini and Wesley.             |
 | 15     | -30.8561 | 71.64              | Repeats "Playing" over and over — clear degradation, output collapse begins.    |
 
-We didn't get to a response involving `portmanteau` like we did for a random `tokenstein` we created, which is
-ideally what we'd like the unlearning to do. Also I'm sure we damaged the model's response on all the `retain`
-training data (everything not involving `supercal...`).
-
-In this post we'll do something more sophisticated and see what happens.
+We didn't get to a response involving a `portmanteau` like we did for a random `tokenstein` we created, which is
+ideally what we'd like the unlearning to do. The model appeared quite damaged
+at the end.
 
 # Unlearning
 
-Here is a a real world example to motivate unlearning: after a $100 million investment in model training, the model generates output that infringes on copyrighted material. Even if one was willing to retrain without data attributed to this output, the model may have been fine tuned on several tasks already that used private or proprietary training data. 
+Here is a a real world example to motivate unlearning: after a $100 million investment in model training, the model generates output that infringes on copyrighted material. Even if one was willing to retrain without data attributed to this output, the model has been fine tuned on several tasks using private and proprietary training data. 
 
-There is a lot of interesting ideas in the field - preversiving knowledge through task arthimetic, bypassing a need for fine tuned
-training data using a matrix decompisition (like SVD) on model weights, orthogonal gradients - merging models ...
+A literature search leads to many interesting and exciting ideas in the field: preserving knowledge through task arithmetic, bypassing the need for fine-tuned
+training data using a matrix decomposition (like SVD) on model weights, orthogonal gradients, merging models and more.
 
 
-# Orthogonal Gradients
-For this post - I'm most curious about orthogonal gradients.
+# Orthogonal Gradient Method
+For this post – I'm most curious about orthogonal gradients.
 
 This is where in addition to computing the gradient on the "forget" data, you also compute a gradient (or multiple) from the
-"retain" data - and then you project your forget gradient into the subspace orthogonal to the retrain gradient (or gradients)
-and change parameters in that direction. 
+"retain" data – and then you project your forget gradient into the subspace orthogonal to the retain gradient (or gradients)
+and change parameters in that direction.
 
-I like the this idea, also seems fun to mess directly with gradients.
-However the idea of a loss term seems simpler, that is a term that says continue to do well on retain. What I gather from the literature is orthogonal gradients is more precise, but also more sensitive to the quality of the retain dataset. We'll see what happens!
+I like this idea, also seems fun to mess directly with gradients.
+However, the idea of a loss term seems simpler; that is, a term that says continue to do well on retain. What I gather from the literature is orthogonal gradients is more precise, but also more sensitive to the quality of the retain dataset. We'll see what happens!
 
 
-# Experiment Design
+# Experimental Setup
 
 See code in [https://github.com/MrCartoonology/unlearning](https://github.com/MrCartoonology/unlearning). 
 
@@ -59,27 +66,26 @@ See code in [https://github.com/MrCartoonology/unlearning](https://github.com/Mr
      * `supercal..` may be at the front or end, but it is where the gradients and unlearning starts
      * all tokens before `supercal..` are context, no gradient/backprop
 * retain data
-  * take 5000 random chunks of text from wikipedia
-     * 20 lines (check that `supercal...` not in them)
+  * take 5000 random chunks of text from wikipedia (check that `supercal...` not in them)
 * LORA config
-  * all `query` and `value` for all 28 layers
+  * the `query` and `value` matrices, across all 28 layers
   * rank `16`
   * lora_alpha `32`
   * lora_dropout `0.1`
-*training
+* training
   * learning_rate: `2.0e-4`
   * optim `adamw_torch`
 * Orthogonal Gradient:
-  * Every 3 steps - go through 16 retain batches (32 examples)
+  * Every 3 steps – get 16 new retain batches (32 examples)
     * group in sets of 4
     * compute 4 gradients
-    * The kernal of these 4 define the subspace to project the unlearn gradient onto
+    * The kernel of these 4 define the subspace to project the unlearn gradient onto
 
-# Results
+# Experimental Results
 ## Supercal response
-Like in the first experiment, we track a prompt response - in this case
+Like in the first experiment, we track a prompt response – in this case
 ```
-Explain the word supercalifragilisticexpialidocious.
+Explain the word `supercalifragilisticexpialidocious`.
 ```
 
 Here's how things evolve:
@@ -102,7 +108,7 @@ chosen. The prompt was
 Write a python function to reverse a string.
 ```
 
-and the response evlolved as
+and the response evolved as
 
 | n_step | Loss     | Retain Response                                                                                      |
 |--------|----------|------------------------------------------------------------------------------------------------------|
@@ -112,39 +118,38 @@ and the response evlolved as
 | 21     | -83.0563 | `Q. s = s.split() for i in range(len(s)): Q = [] "dlrow olleH"... def reverse(s): s = "Hello World"` |
 | 22     | -77.0541 | `s = s.split("") QQQQQQQQQ... def reverse(s):`                                                       |
 
-### A few notes:
-* Steps 1–18 repeat the same correct answer format.
-* At step 19, the model begins producing fragmented, confused code.
-* By step 22, output devolves into noise — even affecting syntax (split("") QQQQQQ...).
+Note, the retain response didn't change until step 19. By step 22, broken.
 
 
-## Some Success?
+## Claim Success?
 
-The unlearn (`supercal`) responses in step 10 is kind of what we want, explaining `supercal` in terms of its parts. Meanwhile, the retain response hasn't changed (seems this model is not good at coding though).
+The unlearn (`supercal...`) responses in step 10 is kind of what we want: 
+* explains `supercal...` in terms of its parts
+* The retain response hasn't changed 
+  * (seems this model is not good at coding though).
 
 # Other Metrics
 
 ## Losses
-Tracking the losses on the unlearn vs retain sets - retain looks good at step 10 
+Tracking the losses on the unlearn vs retain sets – retain looks good at step 10
 
 (left is retain loss, right is unlearn, following negative gradient)
 
 <img src="/assets/images/orth_grad_unlearn_losses.png" alt="unlearn/retain losses"  />
 
 ## Gradient Signal Change
-A question to ask - how much did we change the "unlearn" gradient by projecting into the orthogonal complement of the retain gradients? If we take ratio
+A question to ask – how much did we change the "unlearn" gradient by projecting into the orthogonal complement of the retain gradients? If we take the ratio
 
 ```
-| after_projection( grad_{unlearn} ) |
-    ---------------------------
-        | grad_{unlearn} |
+      | after_projection( grad_{unlearn} ) |
+-----------------------------------------------
+             | grad_{unlearn} |
 ```
 
-as a percentage - what do we see?
+as a percentage – what do we see?
 
 
-
-In the beggining - not much, only a .7% change at step 10
+In the beginning – not much, only a 0.7% change at step 10
 
 <img src="/assets/images/orth_grad_perc.png" alt="unlearn grad perc change" 
  style="width: 60%; max-width: 500px;" />
@@ -155,28 +160,30 @@ After collapse, in later steps we see it go up to 60%
  style="width: 60%; max-width: 500px;" />
 
 
-Testing with a much smaller model showed 30% change right from the beggining, so I was expecting gradient projection to kill more of the signal. I suspect the larger parameter space explains it.
+Testing with a much smaller model showed a 30% change right from the beginning. 
+That model (`EleutherAI/gpt-neo-125M`) is 50 times smaller than the 6B model used
+in these experiments. 
 
 ## Retain Condition Number and Magnitude
-I was also curious about the condition number of the 4 gradients I put together for the retain set - that is after doing a orthogonal decomposition on them, what is the ratio of the largest eigenvalue to the smallest. 
+I was also curious about the condition number of the 4 gradients I put together for the retain set – that is, after doing an orthogonal decomposition on them, what is the ratio of the largest eigenvalue to the smallest - if it is close to 1, claim this is good - suggests the 4 gradients project comparably in their respective distinct directions. If high, suggests the gradients are collasping around a smaller dimension.
 
-Also curious about the median magnitude of the 4 retain gradients before decomposition
+Also curious about the median magnitude of the 4 retain gradients before decomposition.
 
-<img src="/assets/images/orth_grad_cond_num_mag.png" alt="retain condition number and magnitude" 
+<img src="/assets/images/orth_grad_cond_num_mag.png" alt="retain condition number and magnitude"
  />
 
- You again see things look pretty good around step 10 (low condition number is good, suggests each training example goes in a different direction, model understands differences), but things start to get bad as we head towards step 20.
+ You again see things look pretty good around step 10 (low condition number, low gradient magnitutdes) but things start to get bad as we head towards step 20.
 
-# Conclusion
+# Conclusions and Future Work
 
-It is nice to see orthogonal gradients do something like we hoped
+It is nice to see orthogonal gradients do something like we hoped:
 * forget the link between `supercal...` and Mary Poppins
 * explain `supercal...` from its word pieces
 * while not changing on the retain set
 
-but, we didn't track as much with our first experiment, maybe we didn't need Orthogonal gradients. Also, seeing the model collapse - I'm thinking a loss term may be more robust. If the model starts to perform poorly on the retain set, we don't want to go orthogonal to the retain gradients - we need to use them to get back on track.
+But, we didn't track as much with our first experiment, maybe we didn't need orthogonal gradients. Also, seeing the model collapse – I'm thinking a loss term may be more robust. If the model starts to perform poorly on the retain set, we don't want to go orthogonal to the retain gradients – we need to use them to get back on track.
 
-Another aspect is the data. A diverse retain dataset is important, but what if we added to it, the unlearn dataset, but before and after supercal? We're just trying to get it to unlearn `supercal...`, knowledge of Mary Poppins is great. That would mean including retain training data like
+Another aspect is the data. A diverse retain dataset is important, you want to cover what is not in the unlearn. However for this experiment, could we get a more precise,  surgical unlearning of `supercal...` if we *included* the unlearn dataset, up to the word `supercal`? That would mean including retain training data like
 
 ```
 Mr. Banks proceeds to the bank where he is fired in the most humiliating way 
@@ -185,9 +192,9 @@ left at a loss for words when ordered to give a statement about his dismissal,
 Mr. Banks realizes the true priorities of life and gleefully uses Mary's all purpose word
 ```
 
-but not actually have the word there ... would it create a more surgical unlearning of `supercal...`?
+where we have stopped at `supercal`.
 
-Then of course, there is the infra - it took 12 hours for me to take those 65 steps, running on the Mac Studio CPU - should those 10 steps be spread out over 1000 with a smaller learning rate?
+Then of course, there is the infrastructure – it took 12 hours for me to take those 65 steps, running on the Mac Studio CPU do to memory constraints – what would happen if we took 1000 smaller steps on a GPU?
 
 # Unlearning Literature
 
@@ -205,15 +212,13 @@ These papers
 - [OrthoGrad: Go beyond your means](https://arxiv.org/html/2503.02312v1)
 use more retain gradients to project onto a smaller subspace. Seems like a good technique to mitigate a zero retain gradient.
 
-The field is so big there are overview papers - like this 2024 paper [On Large Language Model Continual Unlearning](https://arxiv.org/abs/2407.10223)
+The field is so big there are overview papers – like this 2024 paper [On Large Language Model Continual Unlearning](https://arxiv.org/abs/2407.10223)
 
-Some references I found were side stepping the need for retain task training data by pulling the task subspace out of the weights - like working with a
-low rank approximation to a weight matrix. It made me wonder if there are techniques more tuned to transformer architecture - I thought this
-[STRUCTURE-AWARE PARAMETER-EFFICIENTMACHINE UNLEARNING ON TRANSFORMER MODELS](https://openreview.net/forum?id=drrXhD2r8V) sounded really cool -
-it's on open review for 2025 ICLR but was not accepted. The review comments list some other papers in the field that would probably be good to look at
+Some references I found were side-stepping the need for retain task training data by pulling the task subspace out of the weights – like working with a
+low rank approximation to a weight matrix. It made me wonder if there are techniques more tuned to transformer architecture – I thought this paper
+* [STRUCTURE-AWARE PARAMETER-EFFICIENTMACHINE UNLEARNING ON TRANSFORMER MODELS](https://openreview.net/forum?id=drrXhD2r8V) 
+sounded really cool – it was on open review for 2025 ICLR but was not accepted. The review comments list some other papers in the field that would probably be good to look at
 
 [1] Fan, C., Liu, J., Zhang, Y., Wong, E., Wei, D., & Liu, S. (2023). Salun: Empowering machine unlearning via gradient-based weight saliency in both image classification and generation. arXiv preprint arXiv:2310.12508.
 
 [2] Chen, M., Gao, W., Liu, G., Peng, K., & Wang, C. (2023). Boundary unlearning: Rapid forgetting of deep networks via shifting the decision boundary. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (pp. 7766-7775).
-
-

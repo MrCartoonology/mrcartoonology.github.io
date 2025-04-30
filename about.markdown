@@ -3,13 +3,8 @@ layout: page
 title: About
 permalink: /about/
 ---
-This site showcases portfolio projects in Machine Learning and AI. In addition to Machine Learning, 
-
-I have additional interests in authoring, illustration, and cartooning.
-
-## Creative
-
--  C[The Veggie Medley Job]()
+David Schneider is a Machine Learning Research Engineer, Data Scientist, 
+Mathematician, and children's book author/illustrator. 
 
 ## Social
 
@@ -18,4 +13,6 @@ I have additional interests in authoring, illustration, and cartooning.
 - <img src="https://img.icons8.com/color/48/reddit--v1.png" width="24"/> [Reddit: u/mr-cartoonology](https://www.reddit.com/user/mr-cartoonology)
 - <img src="https://img.icons8.com/color/48/linkedin.png" width="24"/> [LinkedIn: David Schneider](https://www.linkedin.com/in/david-schneider-93896b16/)
 
+## Children's Book
+- [The Veggie Medley Job](https://a.co/d/79iYrKW), December 2024, self published 
 

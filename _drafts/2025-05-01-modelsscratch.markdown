@@ -74,28 +74,32 @@ Models probly too big - I should scale down to 11 million?
 # Attention Plots
 
 
-Attention is the heart of the Transformer.
+**Attention is the heart of the Transformer.**
 
-Now that we’ve built our model from scratch, let’s take a look at what the attention layers are actually doing. Our architecture has four Transformer blocks, and each block contains four attention heads—giving us 16 independent attention mechanisms in total.
+Now that we’ve built our model from scratch, let’s take a look at what the attention layers are actually doing. Our architecture has **four Transformer blocks**, and each block contains **four attention heads**—giving us **16 independent attention mechanisms in total**.
 
 For every training batch, we compute a loss across the entire sequence length—from 0 up to 512 tokens in our case. That means for each example in the batch, at each position in the sequence, each of those 16 attention heads outputs a distinct set of attention weights.
 
-One natural question is: how much are we attending to?
-To measure this, we compute the entropy of the attention weights (after softmax). High entropy means attention is spread evenly; low entropy means it is focused or sparse.
+One natural question is: **how much are we attending to?**
+To measure this, we compute the **entropy** of the attention weights (after softmax). High entropy means attention is spread evenly; low entropy means it is focused or sparse.
 
-For a sequence length of 512, the maximum possible entropy is 9 bits (since log₂(512) = 9). So if we observe an entropy of, say, 8, that’s already significant—it suggests attention is concentrated over only half the sequence. To make this more interpretable, we exponentiate the entropy to get what we call the support: the effective number of elements being attended to.
+For a sequence length of 512, the ***maximum possible entropy (in bits) is 9*** (since log₂(512) = 9). (I'll use bits instead of nats for entropy units). So if we observe an entropy of, say, 8, that’s already significant—it suggests attention is concentrated over only half the sequence. To make this more interpretable, we exponentiate the entropy to get what we call the **support**: the effective number of elements being attended to.
 
+```
 For example, an entropy of 8 bits corresponds to a support of 2⁸ = 256 elements.
+```
 
-All entropy values in these plots are computed using base 2, since we find it more intuitive to think in bits.
-
-First Plot: Attention Support Sample
+## First Plot: Batch of Attention Support
 
 The first plot below shows a single batch—just to illustrate what support looks like. You can see that in some cases, attention is spread nearly across the entire sequence (support close to 400+), while in others it is much more focused.
+
+You see that the masking is working - attention support never exceeds seq length in the batch.
 
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/attn_weights_support.png" style="width:60%;" />
 </div>
+
+## Normalized Attention
 
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/attn_support_hist_all.png" style="width:60%;" />

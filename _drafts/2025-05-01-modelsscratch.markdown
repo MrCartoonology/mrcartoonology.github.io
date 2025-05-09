@@ -99,11 +99,22 @@ You see that the masking is working - attention support never exceeds seq length
   <img src="/assets/images/modelsfromscratch/attn_weights_support.png" style="width:60%;" />
 </div>
 
-## Normalized Attention
+## Normalized Attention Support
+
+In the previous plot, it's hard to compare attention support across different sequence lengths. For example, when the sequence length is 0, the support is always 1—since the model can only attend to the first token when predicting the second.
+
+To better visualize, we compute **normalized support**, dividing the support by the sequence length. Now, the maximum normalized support is 1.0, making values across different lengths more comparable.
+
+We also include both training and validation data, using the same number of randomly selected batches from each.
+
+This plot shows the **distribution of normalized attention support** across all 16 attention heads, along with overall mean. The spike at 1.0 likely corresponds to seq_len=1. 
 
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/attn_support_hist_all.png" style="width:60%;" />
 </div>
+
+## Normalized Attention Support vs Sequence Length
+
 
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/attn_support_vs_seq_len.png" style="width:60%;" />

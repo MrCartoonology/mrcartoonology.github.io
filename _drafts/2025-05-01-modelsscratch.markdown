@@ -113,14 +113,22 @@ This plot shows the **distribution of normalized attention support** across all 
   <img src="/assets/images/modelsfromscratch/attn_support_hist_all.png" style="width:60%;" />
 </div>
 
+
 ## Normalized Attention Support vs Sequence Length
 
+Normalized support depends on the sequence length. For example, an overall mean of 16% normalized support corresponds to just 1.6 tokens at sequence length 10, but 16 tokens at sequence length 100.
+
+To better understand this, we visualize how **normalized attention support varies with sequence length**:
 
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/attn_support_vs_seq_len.png" style="width:60%;" />
 </div>
 
+You again see how the support is a little higher for the validation split than train. 
 
+## By Layer / Head
+
+Finally 
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/attn_support_hist_by_block_head_w_seq_len_filter.png" style="width:60%;" />
 </div>

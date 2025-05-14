@@ -1,34 +1,36 @@
 ---
 layout: post
 title:  "Exploring the Transformer"
-date:   2025-05-01 12:38:00 -0800
+date:   2025-05-13 12:38:00 -0800
 categories: jekyll update
 ---
-After implementing a transformer from scratch, we dig into visualizing the attention
-mechanism. What we find leads to a surprising realization! Let's go!
+We'll implement a transformer from scratch and train it on the PyTorch codebase! 
+Next we'll dig into visualizing the attention mechanism - and uncover insights that
+lead to improvements!  We'll wrap up with compelling ideas for future endeavors. Let's go!
 
 ## Implementing from Scratch
-I mostly looked at the original transformer paper, 
-(Attention Is All You Need](https://arxiv.org/abs/1706.03762) and had AI chats. 
-The code is open sourced at [MrCartoonology/modelsfromscratch](https://github.com/MrCartoonology/modelsfromscratch) - it 
-does not use the most performant patterns (for example, multi headed attention
-should be computed in parallel). It uses Rotary Positonal Embedding (RoPE) as
-opposed to additive positional encoding. 
+References for the implementation are mostly AI chats and the [Attention Is All You Need](https://arxiv.org/abs/1706.03762) paper - no copy and paste for the good stuff :)
+
+The code is open sourced at [MrCartoonology/modelsfromscratch](https://github.com/MrCartoonology/modelsfromscratch) - the [readme](https://github.com/MrCartoonology/modelsfromscratch/blob/main/README.md) has some notes. 
+It's meant for learning and experimenting--not production. It does not use the most performant patterns (for example, multi-headed attention should be computed in parallel). It uses Rotary Positional Embedding (RoPE) as opposed to additive positional encoding. 
 
 ## Data
 
-For data, all the python files in the [pytorch repo](https://github.com/pytorch/pytorch)! A  90/10 split of train and validation using the 
+The data consists of all the Python files in the [pytorch repo](https://github.com/pytorch/pytorch). It uses a 90/10 split of train and validation. 
+
+The tokenizer is
 ```
 Salesforce/codet5-base num_token_ids: 32100
 ```
-tokenizer, along with a Sequence length=512 and batch_size=100 led to
+
+The sequence length is `512` and batch_size is `100`. This led to
 
 ```
 train   : 3442 files,   59.4 MB,  18,976,632 tokens,    371 steps per epoch.
 val     :  272 files,    6.6 MB,   2,096,577 tokens,     41 steps per epoch.
 ```
 ## Model  
-It is not a lot of data. Applying the 1.7 tokens per parameter [Chinchilla Scaling Laws](https://medium.com/@raniahossam/chinchilla-scaling-laws-for-large-language-models-llms-40c434e4e1c1) for Large LMs would have limited the model to 10 million parameters.  The model I used has 35 million parameters:
+It is not a lot of data. Applying the 1.7 tokens per parameter [Chinchilla Scaling Laws](https://medium.com/@raniahossam/chinchilla-scaling-laws-for-large-language-models-llms-40c434e4e1c1) for Large LMs would have limited the model to 10 million parameters.  The model I trained has 35 million parameters:
 ```
 num_transformer_blocks: 4
 num_attn_heads_per_block: 4
@@ -36,13 +38,12 @@ model_dim: 448
 feed_forward_hidden_dim: 1024
 ```
 
-which, when using the `mps` device on my 64 GB Mac Studio Apple M2 Max, maxed out the memory and took about 30 minutes an epoch.
-
-## Code
-Here is a 
-[snapshot commit](https://github.com/MrCartoonology/modelsfromscratch/tree/e26647f6c2bc7c71a1e1ed31072dcf06fb4003f1) of the code used for training.
+which, when using the `mps` device on my 64 GB Mac Studio Apple M2, maxed out the memory and took about 30 minutes an epoch.
 
 ## Training/Evaluation
+
+For reference, here is a 
+[snapshot commit](https://github.com/MrCartoonology/modelsfromscratch/tree/e26647f6c2bc7c71a1e1ed31072dcf06fb4003f1) of the code used for training.
 
 ### Loss Curves
 Classic overfitting:
@@ -51,13 +52,13 @@ Classic overfitting:
   <img src="/assets/images/modelsfromscratch/transformer_pytorch_first_long_train.png" style="width:60%;" />
 </div>
 
-a loss of 1.78 corresponds to model that can't decide between about six tokens for its output (`e**1.78 ~ 6`). I understand that Production LLM's, especially for structured coding - get to under two tokens.
+A loss of 1.78 corresponds to a model that can't decide between about six tokens for its output (`e**1.78 ~ 6`). Production LLMs, especially for structured coding - get to under two tokens.
 
 ### Prompt Evaluations
 The model was prompted every so often to complete
 
-*  Some code from the pytorch repo
-*  Some new code from this project
+*  A code snippet from the PyTorch repo
+*  A code snippet from this project
 
 At epoch 8, step 3,120 - when the best validation loss is obtained, the prompt results were (using a temperature of 0.7)
 
@@ -116,7 +117,7 @@ class MultiHeadAttnWithRoPE(nn.Module):
   # Yz, q, float eps, and float eps,
 ```
 
-Hmm. I don't know. That is no where near how I completed the function:
+Hmm. I don't know. That is nowhere near how I completed the function:
 
 ```
         k = self.rope_encoder(self.K(X))
@@ -139,13 +140,11 @@ Hmm. I don't know. That is no where near how I completed the function:
 
 Did my transformer model do as well as [Karpathy's RNN](https://karpathy.github.io/2015/05/21/rnn-effectiveness/)?
 
-I don't think so. I have 3 times as many parameters, but he had 10 times more data. He predicted over next character, I over next token.
-With a 1000 times more tokens than characters -- more to learn? need even more data?
+I don't think so. I have 3 times as many parameters, but he had 10 times more data. He predicted over next character, I over next token -- using an off the shelf tokenizer on a small dataset. 
 
 # Attention Plots
 
-Ok, time for the fun stuff! We know Attention is at the heart of the [Transformer](https://arxiv.org/abs/1706.03762)! Let’s take a look at what the attention layers are actually doing!  We'll use the best model (on validation), modify the code
-to return the attention weights, and take a look!
+Ok, time for the fun stuff! We know Attention is at the heart of the [Transformer](https://arxiv.org/abs/1706.03762)! Let’s take a look at what the attention layers are actually doing!  We'll use the best model (on validation), modify the code to return the attention weights, and take a look!
 
 Our architecture has **four Transformer blocks**, and each block contains **four attention heads**—giving us **16 independent attention mechanisms in total**.
 
@@ -154,9 +153,9 @@ This branch: [attnvis branch](https://github.com/MrCartoonology/modelsfromscratc
 For every training batch, we compute a loss across the entire sequence length—from 0 up to 512 tokens in our case. That means for each example in the batch, at each position in the sequence, each of those 16 attention heads outputs a distinct set of attention weights.
 
 One natural question is: **how much are we attending to?**
-To measure this, we compute the **entropy** of the attention weights (after softmax). High entropy means attention is spread evenly; low entropy means it is focused or sparse.
+To measure this, we compute the **entropy** of the attention weights (after softmax). High entropy indicates attention is spread evenly; low entropy that it is more focused or sparse.
 
-For a sequence length of 512, the ***maximum possible entropy (in bits) is 9*** (since log₂(512) = 9). (I'll use bits instead of nats for entropy units). So if we observe an entropy of, say, 8, that’s already significant—it suggests attention is concentrated over only half the sequence. To make this more interpretable, we exponentiate the entropy to get what we call the **support**: the effective number of elements being attended to.
+For our maximum sequence length of 512, the ***maximum possible entropy (in bits) is 9*** (since log₂(512) = 9). (I'll use bits instead of nats for entropy units). So if we observe an entropy of, say, 8, that’s already significant—it suggests attention is concentrated over only half the sequence. To make this more interpretable, we exponentiate the entropy to get what we call the **support**: the effective number of elements being attended to.
 
 ```
 For example, an entropy of 8 bits corresponds to a support of 2⁸ = 256 elements.
@@ -174,7 +173,7 @@ We see that the masking is working - attention support never exceeds seq length 
 
 ## Normalized Attention Support
 
-In the previous plot, it's hard to compare attention support across different sequence lengths. For example, when the sequence length is 0, the support is always 1—since the model can only attend to the first token when predicting the second.
+In the previous plot, it's hard to compare attention support across different sequence lengths. For example, when the sequence length is 1, the support is always 1—since the model can only attend to the first token when predicting the second.
 
 To better visualize, we compute **normalized support**, dividing the support by the sequence length. Now, the maximum normalized support is 1.0, making values across different lengths more comparable.
 
@@ -186,6 +185,7 @@ This plot shows the **distribution of normalized attention support** across all 
   <img src="/assets/images/modelsfromscratch/attn_support_hist_all.png" style="width:60%;" />
 </div>
 
+Note the overall means of `0.161` for train and `0.166` for validation - showing attention is a little more spread out for validation.
 
 ## Normalized Attention Support vs Sequence Length
 
@@ -201,7 +201,6 @@ We again see how the support is a little higher for the validation split than tr
 
 ## By Layer / Head
 
-
 Finally, we take a look at how the attention support varies across different layers and heads. To make the results more comparable, we focus on a filtered range of sequence lengths. Each subplot in the 4×4 grid shows a histogram of attention support for a specific block/head, (block=layer) with both training and validation distributions overlaid.
 
 <div style="text-align: center;">
@@ -214,11 +213,13 @@ Observations:  the **first block (Block 0)**—which directly processes the inpu
 
 Another interesting observation is the apparent **correlation among heads** across layers. For instance, **Head 0 in Blocks 1 through 3** seems consistently more concentrated near zero, unlike other heads.
 
-This difference between the head 0's and later heads seems funny. If you look closely the prompting setion above, you'll find a misunderstanding about RoPE that explains it!  
+However, this difference between the `0` heads and later heads seems funny. Read on ...
 
 
 ## Positional Encoding
 I spent a lot of time thinking about, and implementing the positional encoding (settling on RoPE). The Hugging face blog [You could have designed state of the art positional encoding](https://huggingface.co/blog/designing-positional-encoding) is a great resource. It motivates why we need positional encoding in general, goes through additive positional encoding, and the arguments and value of rotational position encoding. 
+
+I got rotational positional encoding working, my model trained, things seemed good - but the layer / head plot got thinking more carefully about what I'd done, and led to the realization that I had a subtle bug!
 
 Both additive and RoPE make use of vectors that roughly look like this:
 
@@ -226,12 +227,12 @@ Both additive and RoPE make use of vectors that roughly look like this:
   <img src="/assets/images/modelsfromscratch/pe.png" style="width:60%;" />
 </div>
 
-Additive positional encoding will add that to the inputs -- or to the token vector embeddings that have been looked up from the original token ids.
+Additive positional encoding will add that to the inputs token vector embeddings that have been looked up from the original token ids.
 
-Rotational, relative positional encoding will use them to rotate each two consecutive elements of an attention heads `query` and `key` components separately before computing the attention weights. In this way, the `Q K^T` computation will form relative differences in position, rather than adding fixed positions (see Hugging face post).
+Rotational, relative positional encoding will use them to rotate each two consecutive elements of an attention heads `query` and `key` components separately before computing the attention weights. In this way, the `Q K^T` computation will form relative differences in position, rather than adding fixed positions (see [Hugging face post](https://huggingface.co/blog/designing-positional-encoding)).
 
 ## Implementation Issue
-The way I implemented multi headed attention + RoPE was to setup `Q` and `K` projection matrices
+The way I implemented multi-headed attention + RoPE was to setup `Q` and `K` projection matrices
 ```
         self.Q = nn.Linear(model_dim, model_dim)
         self.K = nn.Linear(model_dim, model_dim)
@@ -262,7 +263,7 @@ while my last is rotated by the slow frequencies:
   <img src="/assets/images/modelsfromscratch/pe_last.png" style="width:60%;" />
 </div>
 
-This was a sublte bug! Maybe you spotted it when reading the code in the prompting section? In anycase, the same frequencies are supposed to be applied to all attention heads. 
+This was a subtle bug! Maybe you spotted it when reading the code in the prompting section? In any case, the same frequencies are supposed to be applied to all attention heads. 
 
 It is valuable to showcase how digging in, making plots, can help find subtle problems with machine learning implementations, but let's see what kind of difference it makes to fix it.
 
@@ -278,7 +279,7 @@ The training curves do not look very different - but one caveat is I did not fix
   <img src="/assets/images/modelsfromscratch/loss_rope_fix.png" style="width:60%;" />
 </div>
 
-The validation loss is slightly better without the fix. 
+The validation loss is slightly better without the fix, on this new split of the data: 
 
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/loss_rope_fix_zoom.png" style="width:60%;" />
@@ -300,7 +301,7 @@ The validation loss is slightly better without the fix.
         query
 ```
 
- Compare to above with bug:
+Below I'll repeat the responses we saw with the bug:
 * pytorch
   ```
    class__ = "torch::executorch::Tensor"
@@ -324,11 +325,16 @@ Code for plots below is in the branch [attn_fix_rope](https://github.com/MrCarto
 
 ## RoPE Fix Normalized Attention Support
 
+The fix didn't have much impact on the loss or prompts - maybe the bug was actually a happy accident worth exploring further, but now
+
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/rope_fix_attn_support_hist_all.png" style="width:60%;" />
 </div>
 
-The average normalized support has narrowed by 12.5% from .16 to .14. The gap between train and validation has narrowed substantially.
+ we are seeing some promising impact of the fix:
+
+* the average normalized support has narrowed by 12.5% from .16 to .14
+* The gap between train and validation has narrowed substantially.
 
 ## RoPE Fix Block/Head Normalized Attention Support
 
@@ -340,16 +346,18 @@ This looks better. I don't see the big difference between head 0 and the rest th
 
 # More Attention Plots
 
-## Multi Head Over Input?
+Emboldened by the value of visualizing attention support and diversity across heads, we now ask: what more can we observe to understand how the transformer works--and whether it's working optimally?
+
+## Multi-Head Over Input?
 How different are these heads? What are they attending to?
 
-Continuing with the rope fixed model, here are the distributions of the four attention heads on the input layer, for a random traning example of 50 tokens. Indeed. They are different :) 
+Continuing with the rope fixed model, here are the distributions of the four attention heads on the input layer, for a random training example of 50 tokens. Indeed. They are different :) 
 
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/attn_head_lyr1_dist.png" style="width:85%;" />
 </div>
 
-Below we've decoded the 50, and given a red background based on the attention probability. We scaled each head's attention probability so that they are the same red color at their respective largest probablities. The label to predict is in yellow:
+Below we've decoded the 50, and given a red background based on the attention probability. We scaled each head's attention probability so that they are the same red color at their respective largest probabilities. The label to predict is in yellow:
 
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/tokens_lyr1_dist.png" style="width:55%;" />
@@ -357,9 +365,19 @@ Below we've decoded the 50, and given a red background based on the attention pr
 
 ## Attention Diversity
 
-How different do these heads get? Given two of the four heads in a block, we could compute the earth mover distance. Then we could average that over all the six pairs of the four heads. Maybe that would be an interesting metric to measure the richness of an input sequence for a layer? As there are six pairs per block, we could take the 24 earth mover distances that come from pairs of attention heads within a block, then take an average. Would this somehow measure the complexity, or diversity of features that the **whole model** uses to predict on an input?
+How different do these heads get? Given two of the four heads in a block, we could compute the earth mover distance. Then we could average that over all the six pairs of the four heads. Maybe that would be an interesting metric to measure the richness of an input sequence for a layer? As there are six pairs per block, we could take the 24 earth mover distances that come from pairs of attention heads within a block, then take an average. That is, average these:
+```
+for headA in range(4):
+   attnA = get_attention_distribution(headA)
+   cdfA = cumsum(attnA)
+   for headB in range(headA+1, 4):
+      attnB = get_attention_distribution(headB)
+      cdfB = cumsum(attnB)
+      earth_mover_distance = sum(abs(cdfB - cdfA))
+```
+Would this somehow measure the complexity, or diversity of features that the **whole model** uses to predict on an input?
 
-Let's call that metric **Attention Diversity**. Restricting ourselves to sequences of length 50, where the maximum earth mover distance is 50, we get this historgram
+Let's call that metric **Attention Diversity**. Restricting ourselves to sequences of length 50, where the maximum earth mover distance is 50, we get this histogram
 
 <div style="text-align: center;">
   <img src="/assets/images/modelsfromscratch/attn_div_scores.png" style="width:60%;" />
@@ -369,9 +387,9 @@ on a subset of the train split.
 
 ### Simplest and Most Complex Inputs?
 
-So what does the input look like for outliers of this metric? How might we interpret those inputs? is the input attributes to the lowest attention diversity of 2.2 the simplest code in the pytorch codebase? Is the snippet scoring 20 the most complest?
+So what does the input look like for outliers of this metric? How might we interpret those inputs? The lowest attention diversity score is 2.2. And the highest is 20
 
-#### Simplest
+#### Lowest Attn Diversity (score=2.2)
 
 ```
 not getting gradient since the
@@ -382,7 +400,7 @@ not getting gradient since the
 ```
 and the token to predict is `10`
 
-#### Most Complex/Diverse
+#### Highest Attn Diversity (score=20)
 
 ```
 
@@ -392,9 +410,9 @@ and the token to predict is `10`
         )
 ```
 
-and the token to predict is comprised of `seven consecutivie white space characters`.
+and the token to predict is `seven white space characters`.
 
-Not really what I would expect for simple or complex inputs :) 
+I was hoping we might recognize a low score as simpler to complete and a high score as more complex - but I'm not seeing it :) 
 
 
 # Compelling Ideas
@@ -405,13 +423,13 @@ To wrap up, here are a number of ideas that interest me for future exploration. 
 
 Accidentally using different encoding for the heads brings up the question - should the encoding be varied in some way? Would that allow the heads to learn a richer more diverse set of features?
 
-## Hard Atterntion?
- I worked on a TabNet project in the past.  A takeway was hard attention is better than soft. The transformer uses soft attention - a softmax is applied to the query key multiplication `Q * K^T` to get the attention distribution. Even if the support is 16/512, the attention most likely attends to all 512 value components - but just with tiny weights for most. Would it help or hurt a transformer to use hard attention? I'd guess soft is better, seems you generally want to attend to everything in the past to some extent, and for creative outputs it probably helps. Practically, hard attention is much slower on GPU's so maybe it is a moot point.
+## Hard Attention?
+ I worked on a TabNet project in the past.  A takeaway was hard attention is better than soft. The transformer uses soft attention - a softmax is applied to the query key multiplication `Q * K^T` to get the attention distribution. Even if the support is 16/512, the attention most likely attends to all 512 value components - but just with tiny weights for most. Would it help or hurt a transformer to use hard attention? I'd guess soft is better, seems you generally want to attend to everything in the past to some extent, and for creative outputs it probably helps. Practically, hard attention is much slower on GPUs so maybe it is a moot point.
 
 
 ## Confidence Fine Tuning
 
-For inference, we use a temperature parameter for LLM's to control how creative/random its outputs will be. This is only applies to the the final logits over the next token. However, what about all the attention distributions over past tokens? Perhaps the model would acheive a better overall loss if we changed the temperature used in the softmax? Basically this equation
+For inference, we use a temperature parameter for LLM's to control how creative/random its outputs will be. This only applies to the final logits over the next token. However, what about all the attention distributions over past tokens? Perhaps the model would achieve a better overall loss if we changed the temperature used in the softmax? Basically this equation
 ```
         /      Q * K^T     \
 softmax |  --------------- |
@@ -426,7 +444,7 @@ softmax |  ----------------------------- |
 ```
 
 where `w` is a new trainable parameter for fine tuning? With only one `w` for each attention head, this would be a very small set of parameters to train. Would be
-interesting to see how it compare to LORA. What if we let `w` vary with the sequence length? For each attention head, there could be one `w` for sequences of length `50-100`, another for `101-200`, ect.
+interesting to see how it compares to LORA. What if we let `w` vary with the sequence length? For each attention head, there could be one `w` for sequences of length `50-100`, another for `101-200`, etc.
 
 
 ## Complexification
@@ -435,9 +453,9 @@ A desirable property for positional encoding is linearity:
 ```
 positional_encoding(i) -  positional_encoding(j)  = positional_encoding(i-j) 
 ```
-this is well explained with complex numbers through the phase, or `theta` in the `e^{i\theta}` representation. 
+this is well explained with complex numbers through the phase, or θ in the `e^{iθ}` representation. 
 
-The arvix [paper](https://arxiv.org/pdf/2104.09864) that presented the RoFormer use complex numbers for the discussion.
+The arxiv [paper](https://arxiv.org/pdf/2104.09864) that presented the RoFormer use complex numbers for the discussion.
 
 Would be interesting to work over complex numbers for the transformer, in such a way (half baked idea coming) that the transformer 
 block outputs track position through the phases. 

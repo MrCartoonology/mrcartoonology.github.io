@@ -8,13 +8,12 @@ After implementing a transformer from scratch, we dig into visualizing the atten
 mechanism. What we find leads to a surprising realization! Let's go!
 
 ## Implementing from Scratch
-There are many great references on learning the transformer, I was not trying to make
-  another one.  I mostly looked at the
-  original transformer paper, (Attention Is All You Need](https://arxiv.org/abs/1706.03762) and had AI chats. The code is open sourced at
-  [MrCartoonology/modelsfromscratch](https://github.com/MrCartoonology/modelsfromscratch) - it 
+I mostly looked at the original transformer paper, 
+(Attention Is All You Need](https://arxiv.org/abs/1706.03762) and had AI chats. 
+The code is open sourced at [MrCartoonology/modelsfromscratch](https://github.com/MrCartoonology/modelsfromscratch) - it 
 does not use the most performant patterns (for example, multi headed attention
 should be computed in parallel). It uses Rotary Positonal Embedding (RoPE) as
-opposed to additive positional encoding.
+opposed to additive positional encoding. 
 
 ## Data
 

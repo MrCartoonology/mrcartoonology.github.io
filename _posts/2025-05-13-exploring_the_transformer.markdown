@@ -446,7 +446,6 @@ softmax |  ----------------------------- |
 where `w` is a new trainable parameter for fine tuning? With only one `w` for each attention head, this would be a very small set of parameters to train. Would be
 interesting to see how it compares to LORA. What if we let `w` vary with the sequence length? For each attention head, there could be one `w` for sequences of length `50-100`, another for `101-200`, etc.
 
-
 ## Complexification
 
 A desirable property for positional encoding is linearity:
@@ -459,3 +458,7 @@ The arxiv [paper](https://arxiv.org/pdf/2104.09864) that presented the RoFormer 
 
 Would be interesting to work over complex numbers for the transformer, in such a way (half baked idea coming) that the transformer 
 block outputs track position through the phases. 
+
+## Updates
+* here is a good [post](https://nickcdryan.com/2024/08/02/introducing-a-learnable-temperature-value-into-the-self-attention-scores/) about learning a temperature parameter for the soft max distribution.
+

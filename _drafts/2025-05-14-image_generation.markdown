@@ -10,7 +10,8 @@ Moving on to image generation models?
 
 I found the AI Engineer book a great resource for LLM's. For Image generation - stable diffusion, newer models, at this point, it can be challenging to get a clear roadmap to follow. There are a number of good posts/blogs on stable diffusion - stanford one, illustrated stable diffusion - but it seems current SOTA is rather different than stable diffusion - with OpenAI model, new black forest labs flux that is flow model. The other thing is the math is harder, variational analysis - bayesian statistics, intractable integrals - at some point I got the [Deep Generative Modeling](https://link.springer.com/book/10.1007/978-3-031-64087-2) book by Jakub Tomczak. 
 
-Then there is data - it is easy to get over ambitious. The Deep Generative Modeling book uses a very simple digts dataset from scikit learn, smaller then MNIST - good way to learn the algorithms. I was looking at the LAION datasets for training stable diffusion, wondering if I could use a subset of them. I'm really interesting in generating images based on my own art, seeing what happens if I include it in a dataset or do fine tuning. However for working through the algorithms at a research level - need to start simple. 
+Then there is data - it is easy to get over ambitious. The Deep Generative Modeling book uses a very simple digts dataset from scikit learn, smaller then MNIST - good way to learn the algorithms. I was looking at the 
+[laion-coco](https://laion.ai/blog/laion-coco/) datasets for training stable diffusion, wondering if I could use a subset of them. I'm really interesting in generating images based on my own art, seeing what happens if I include it in a dataset or do fine tuning. However for working through the algorithms at a research level - need to start simple. 
 
 # DDPM
 I have been focusing on the [Denoising Diffusion Probabalisitc Models paper](https://arxiv.org/abs/2006.11239) from 2020. This paper seems to be a milestone paper in the field - on the one hand Denoising diffusion was introduced in 2015 - but this paper produed SOTA high quality images (at the time) better than other approaches - leading the way to bigger stable diffusion models that denoise in the latent space of a VAE rather than original full image space.
@@ -28,7 +29,8 @@ There are plenty of other resources out there to understand the math and DDPM  -
 
 # Implemention Experiments
 
-In hindsite, I'd start with smaller datasets - but for these experiments I resized the celebetry headshot dataset to 64 x 64 (distorts - they are around 220 x 180 originally). This let me load 200k images into memory to remove any data bottleneck. 
+In hindsite, I'd start with smaller datasets - but for these experiments I resized the [celebrity headshot dataset](https://drive.usercontent.google.com/open?id=1m8-EBPgi5MRubrm6iQjafK2QMHDBMSfJ&authuser=0)
+) to 64 x 64 (distorts - they are around 220 x 180 originally). This let me load 200k images into memory to remove any data bottleneck. 
 
 ## First Run
 
@@ -112,45 +114,89 @@ As the model predicts noise `eps ~ N(0,I)`, the predictions should have zero mea
 </div>
 
 two hypothesis for that bias
-* bug - the amount of noise the training adds to create targets for each `t` is very precise, and the amount of predicted noise removed during sampling is very precise - error in implementing these formulas?
+* bug - the amount of noise the training adds to create targets for each `t` is very precise, and the amount of predicted noise removed during sampling is very precise - error in implementing these formulas? Model trained to remove more noise than sampling actually did?
 * model capacity
 
 
-is a training adds noise that it is trained to a bias like thatIt is predicting more noise 
-It seems like there is some accumulation of error happening in the sampling process.
-If you clip the noise to 1.15 and the predicted noise to 1.15 along the way - it does not end up as
-dark - 
-<div style="text-align: center;">
-  <img src="/assets/images/imagegen/ddpm_sample_t0_clipping.png" style="width:60%;" />
-</div>
+## Hugging Face Code
 
+Before thinking about this more, lets try some other code on this dataset. The Hugging Face Annoted DDPM provides a [colab](https://colab.research.google.com/github/huggingface/notebooks/blob/main/examples/annotated_diffusion.ipynb) that is easy to run - (also see this [pytorch DDPM repo](https://github.com/lucidrains/denoising-diffusion-pytorch)). Running it (from this [branch of my repo](https://github.com/MrCartoonology/imagegen/tree/fixrun), [this modified notebook](https://github.com/MrCartoonology/imagegen/blob/fixrun/notebooks/annotated_diffusion_celeba2.ipynb)). 
 
-* sampling over 1000 steps? Accumulation of errors?
-* need float64 precision for these small noise values?
-* model too small? unet only has 1/2 million weights?
+The UNet here is much better
+* 50 million weights vs 1/2 million
+* visual attention layer
+* each unet block has its own MLP to apply to the timestep embedding
 
+Other differnces
+* T=200 instead of 1000, use x5 less timesteps
+* The code applies random left to right flips of the data, but that is disabled for my memory cached dataset of celeba.
 
-
-## Hugging Face
+After 10 hours of training, the loss is better than before
 
 <div style="text-align: center;">
   <img src="/assets/images/imagegen/ddpm_hf_train_loss.png" style="width:80%;" />
 </div>
   
+  
+A sampled image has more structure, but we still don't have celebrity faces, however from the loss curve we can see the model still has more it can learn
 
 <div style="text-align: center;">
   <img src="/assets/images/imagegen/ddpm_hf_train_sample_step_1400.png" style="width:40%;" />
 </div>
 
+
+We see the same behavior with the loss per t, that is the loss is bad for low `t`
+
 <div style="text-align: center;">
   <img src="/assets/images/imagegen/ddpm_hf_t_stats_loss.png" style="width:80%;" />
 </div>
+
+One thing that is fixed for sure is the bias prediction - the predicted noise now has the right statistics
 
 <div style="text-align: center;">
   <img src="/assets/images/imagegen/ddpm_hf_t_stats_noise_mu_std.png" style="width:80%;" />
 </div>
 
-### Help Model with Edges?
+# Thoughts
+
+## Dropping Weights for Simple Algorithm?
+We use the simplified algorithms in the DDPM paper - at the end of the math (see pdf notes above) we have a loss that is
+
+```
+L = L0 + sum L1 ... LT-1 
+```
+
+where each of the `Lt` for `t=1 ... T-1` is a MSE x a constant, that is
+
+```
+Lt = wt | ct eps_t - pred_eps_t(\theta) | **2 
+```
+and those constants `wt` are
+```
+betas = np.linspace(1e-4, .02, 1000, np.float32)
+alphas = 1 - betas
+sigmas = np.sqrt(betas)
+alph_bars = np.cumprod(alphas)
+wt = (betas**2)/(2*(sigmas**2)*alphas*(1-alph_bars))
+```
+that plot like
+
+<div style="text-align: center;">
+  <img src="/assets/images/imagegen/ddpm_simple_algo_dropped_mse_weights.png" style="width:100%;" />
+</div>
+
+Given the t-loss curve, I'm wondering if I don't want the simple algorithm! Those big weights near `t=1` might help the model train faster! The paper points out that later `t` is harder, so dropping these weights will help - though it is interesting to see that the weight at `t=1000` (0.01020) is about 2x bigger than the smallest weight at `t ~ 350 = 0.00497`.
+
+## How Multi-task Across t's?
+
+One the one hand, removing noise at `t=1000` must be very similar to `t=999`, one model for both 'tasks' makes sense, but maybe removing noise at `t=1` is very different? 
+
+It would be interesting what kind of loss we could get for a model trained only for the `t=1` data.
+
+## Filters vs Unet?
+Along the lines of the `t=1` task vs the `t=1000` task, for `t=1`, seems like image processing techniques like median filters would do a pretty good job. For `t=1000`, where we are turning white noise into structured images - deep learning seems more critical, hard to say. Experiments with multiple models for different stages of the diffusion process - maybe could introduce a lighter, more image processing filter based model for some stages.
+
+## Help Model with Edges?
 
 Something interesting about the data, after mapping the RGB values of [0, 255] to [-1, 1] as the DDPM paper describes, a histogram shows a lot of 0 values, especially for blue
 
@@ -158,36 +204,27 @@ Something interesting about the data, after mapping the RGB values of [0, 255] t
   <img src="/assets/images/imagegen/data_rgb_hist.png" style="width:100%;" />
 </div>
 
+a low capacity model may lean a bias to predict -1 more than not. Now take a 1000 timesteps with this kind of bias, might explain why the first run sampling got more and more large negative values as it got to `t=0`.
 
-# Other
+When we do the final decoding for `x0`, we drop values outside [-1,1]. Our starting noise, and sampled noise along the way can have values outside this range. The MSE loss that we derive with the math should teach the model to be more aggressive about removing these big values? 
 
-Start with this [Understanding Stable Diffusion from "Scratch"](https://scholar.harvard.edu/binxuw/classes/machine-learning-scratch/materials/stable-diffusion-scratch)?
+When we do the final decoding, the simplest thing to do is clamp the values to [-1, 1] before mapping to [0,255]. The paper discusses a `L0` loss term - it would simply assign 0 probability to values outside this region.
 
-Colab crashed
+The question is, are these outlier values a problem? Are they more of a problem for the simple algorithm since we drop the `L0` term that does the final decoding? Things to experiment with
+* huber loss (as Hugging Face annoted Diffusion does)
+* clip the sampled noise used in training and sampling
 
-Found a 5 hour youtube video, but it has ads
+On the one hand, clipping is appealing, why not just keep everything in [-1,1]? That is what we start with and end up with - but on the other hand, you are giving the model less information. The Guassian distribution maximizes entropy/information for a fixed variance - any adjustments here probably make things blurier for the model?
 
-This: the Illustrated Stable Diffusion by Jay Alammar?
+# Hallucination and Timestep Stability
 
-[laion-coco](https://laion.ai/blog/laion-coco/) this is 200GB - good captions, diverse stuff?
+I would say my first run had bad hallucination. There's good hallucination where the model gets creative and comes up with new interesting things - but gradually darkening the image is getting too far from the target distribution - bad hallucination. 
 
+It seems similar to how LLM's can hallucinate. Training for LLM's and DDPM is not auto regressive - you only predict the next token or noise to remove based on training data - in DDPM we compute the correct `xt` to learn `x_{t-1}`. But for sampling, we only give it something from `N(0,I)` for `xT`, and then the model computes all the `x_{t}`'s from that, along with sampled noise from `N(0,I)`, but I'd say there is an auto regressive nature to the sampling and inference not present in the training.
 
-[celeb dataset](https://drive.usercontent.google.com/open?id=1m8-EBPgi5MRubrm6iQjafK2QMHDBMSfJ&authuser=0)
+How to make this stable? Clearly it has been done - look at all the prodcution ready models out there! None the less, some thoughts on the subject.
 
+The multi timestep sampling makes me thing of numerical ODE solvers. There are a lot of techniques about making them stable. But perhaps this kind of stability development is more applicable to flow based models - perhaps that is why a recent SOTA model ([the black forest labs FLUX.1 Kontext](https://bfl.ai/announcements/flux-1-kontext) ) if flow based?
 
-[Generative Modeling]()
+In this world of numerically stable ODE solvers - this study has made me think of something from my background in Geometric Mechanics - [Controlled Lagrangians and Stabilization of Discrete Mechanical Systems](https://arxiv.org/pdf/0704.3875). Basically, if you write a numerical ODE solver for a mechanical system  - one thing you can do is keep the energy constant. The total energy for the system will be constant over time. If the system is diverging as you evolve it, and the energy is likewise changing, correcting the energy with each step might stabilize the system. Half baked idea, but who knows? 
 
-[Generative Deep Learning Book]()
-
-
-DDPM paper
-
-Ref 53 - Deep Unsupervised Learning using Nonequilibrium Thermodynamics
-
-contribution:
-
-SOTA image gen
-stable training
-reformulation of loss, lower variance, unet+attention to predict the noise
-
-# DDPM

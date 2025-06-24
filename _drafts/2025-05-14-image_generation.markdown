@@ -228,3 +228,20 @@ The multi timestep sampling makes me thing of numerical ODE solvers. There are a
 
 In this world of numerically stable ODE solvers - this study has made me think of something from my background in Geometric Mechanics - [Controlled Lagrangians and Stabilization of Discrete Mechanical Systems](https://arxiv.org/pdf/0704.3875). Basically, if you write a numerical ODE solver for a mechanical system  - one thing you can do is keep the energy constant. The total energy for the system will be constant over time. If the system is diverging as you evolve it, and the energy is likewise changing, correcting the energy with each step might stabilize the system. Half baked idea, but who knows? 
 
+## Training Multiple Timesteps
+
+DDPM uniformly samples t and trains each stage independently, ie, `model_{t-1}` is trained from input `x_t` and label `x_{t-1}`. What if we also trained `model_{t-1}` and `model_t` using `x_{t-1}` and `x_{t+1}`? To train some of the auto-regressive behavior of sampling?
+
+# How do these Ideas Resonate with the Field?
+
+A lot of these ideas have been developed in the field - some research shows
+
+**Loss is typically higher at low-noise timesteps.**  Several works show that denoising small amounts of noise (e.g. at `t=1`) is harder for the model. [Denoising Task Difficulty-Based Curriculum Learning](https://arxiv.org/abs/2401.12020) from 2024 confirms that low-noise steps are empirically more difficult and slower to converge. 
+
+**Noise schedule and loss weighting matter.** The original DDPM used a linear noise schedule, but [Improved DDPMs](https://arxiv.org/abs/2102.09672) from 2021 showed that a cosine schedule distributes difficulty more evenly and improves performance. That same paper also proposed a hybrid loss that includes the `L0` term (final reconstruction error), which can stabilize training and improve likelihood. More recently, [Understanding Diffusion Objectives as ELBOs](https://arxiv.org/abs/2310.01867) from 2023 analyzed how different timestep weightings affect optimization and gradient variance.
+
+**Sampling in DDPM is effectively autoregressive.** While not autoregressive in the spatial sense, DDPM generation is sequential across time: each prediction depends on the last. This makes it vulnerable to error accumulation. [Restart Sampling](https://arxiv.org/abs/2306.00950) from 2023 shows that inserting occasional noisy steps during sampling can reduce this instability. [Moving Average Sampling in Frequency](https://arxiv.org/abs/2404.07189) from 2024 further stabilizes generation by averaging outputs across timesteps.
+
+**Flow-based models aim to improve stability.** Recent models like [Flow Matching for Generative Modeling](https://arxiv.org/abs/2305.08891) from 2023 treat sampling as solving an ODE, which avoids the compounding errors seen in diffusion sampling. This idea likely underlies the new [FLUX.1 Kontext](https://bfl.ai/announcements/flux-1-kontext) from 2025, which emphasizes identity consistency and stable iterative edits.
+
+**Geometric and physics-inspired approaches are emerging.** [Hamiltonian Generative Flows](https://arxiv.org/abs/2311.09520) from 2023 and [Stable Autonomous Flow Matching](https://arxiv.org/abs/2402.11957) from 2024 use ideas from Hamiltonian dynamics and Lyapunov stability to enforce stability and energy conservation during sampling.

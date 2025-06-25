@@ -243,7 +243,7 @@ Along the lines of the `t=1` task vs the `t=1000` task, for `t=1`, seems like im
 
 For `t=1000`, where we are turning white noise into structured images - deep learning seems more critical. Experiments with multiple models for different stages of the diffusion process would be interesting. Perhaps a lighter, more image processing filter based model might be effective for earlier `t` values.
 
-## Help Model with Edges?
+## Boundary Values, Outliers
 
 Something interesting about the data, after mapping the RGB values of `[0, 255]` to `[-1, 1]` as the DDPM paper describes, a histogram shows a lot of `0` values, especially for blue
 
@@ -251,21 +251,19 @@ Something interesting about the data, after mapping the RGB values of `[0, 255]`
   <img src="/assets/images/imagegen/data_rgb_hist.png" style="width:100%;" />
 </div>
 
-a low capacity model may learn a bias to predict -1 more than not. Now take a 1000 timesteps with this kind of bias, might explain why the first run sampling got more and more large negative values as it got to `t=0`.
+The noise used during training or sampling will sometimes have large values well outside `[-1, 1]` - outliers.
 
-When we do the final decoding for `x0`, we drop values outside [-1,1]. Our starting noise, and sampled noise along the way can have values outside this range. The MSE loss that we derive with the math should teach the model to be more aggressive about removing these big values? 
+The simple algorithm drops the `L0` term, this is the loss term that teaches the model how to do the final decoding - it would assign `0` probability to values outside `[-1, 1]` - it seems like including this term would combat the spread of large negative values we saw during sampling.
 
-When we do the final decoding, the simplest thing to do is clamp the values to [-1, 1] before mapping to [0,255]. The paper discusses a `L0` loss term - it would simply assign 0 probability to values outside this region.
-
-The question is, are these outlier values a problem? Are they more of a problem for the simple algorithm since we drop the `L0` term that does the final decoding? Things to experiment with
+Other things that would be interesting to experiment with
 * huber loss (as Hugging Face annoted Diffusion does)
-* clip the sampled noise used in training and sampling
+* clip the noise used in training and sampling to `[-1, 1]`
 
 On the one hand, clipping is appealing, why not just keep everything in [-1,1]? That is what we start with and end up with - but on the other hand, you are giving the model less information. The Guassian distribution maximizes entropy/information for a fixed variance - any adjustments here probably make things blurier for the model?
 
 # Hallucination and Timestep Stability
 
-I would say my first run had bad hallucination. There's good hallucination where the model gets creative and comes up with new interesting things - but gradually darkening the image is getting too far from the target distribution - bad hallucination. 
+I would say my first run had bad hallucinations. There's good hallucinations where the model gets creative and comes up with new interesting things - but gradually darkening the image is getting too far from the target distribution - bad hallucination. 
 
 It seems similar to how LLM's can hallucinate. Training for LLM's and DDPM is not auto regressive - you only predict the next token or noise to remove based on training data - in DDPM we compute the correct `xt` to learn `x_{t-1}`. But for sampling, we only give it something from `N(0,I)` for `xT`, and then the model computes all the `x_{t}`'s from that, along with sampled noise from `N(0,I)`, but I'd say there is an auto regressive nature to the sampling and inference not present in the training.
 
@@ -292,3 +290,7 @@ A lot of these ideas have been developed in the field - some research shows
 **Flow-based models aim to improve stability.** Recent models like [Flow Matching for Generative Modeling](https://arxiv.org/abs/2305.08891) from 2023 treat sampling as solving an ODE, which avoids the compounding errors seen in diffusion sampling. This idea likely underlies the new [FLUX.1 Kontext](https://bfl.ai/announcements/flux-1-kontext) from 2025, which emphasizes identity consistency and stable iterative edits.
 
 **Geometric and physics-inspired approaches are emerging.** [Hamiltonian Generative Flows](https://arxiv.org/abs/2311.09520) from 2023 and [Stable Autonomous Flow Matching](https://arxiv.org/abs/2402.11957) from 2024 use ideas from Hamiltonian dynamics and Lyapunov stability to enforce stability and energy conservation during sampling.
+
+# Conclusion
+
+We 

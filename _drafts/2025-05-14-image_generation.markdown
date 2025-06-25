@@ -8,18 +8,16 @@ After digging into LLM's with the [Exploring the Transformer](https://mrcartoono
 
 AI image generation took off with the paper [Denoising Diffusion Probabalistic Models](https://arxiv.org/abs/2006.11239) (DDPM) from 2020. DDPM produced higher quality images than the previous SOTA techniques such as GAN's and VAE's by improving diffusion - a method introduced in 2015 in the paper [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://arxiv.org/pdf/1503.03585). 
 
-This post covers the math of DDPM, and then switches into a research-style engineering log. I implemented DDPM from scratch with a simple model - and did not get beautiful images.  I got questions - sampling takes many steps to denoise - and the result can drift away from what model learned to do during training - why? What metrics would expose this kind of problem, give clues how to fix it? What is the model learning for each timestep - how do I know it knows how to denoise at all the timesteps?
+This post covers the math of DDPM, and then switches into a research-style engineering log. I implemented DDPM from scratch with a simple model - and did not get beautiful images.  I got questions:
+* why is the modeling behaving this way?
+* Why do the images get darker and darker during the sampling process?
+* Why is the loss worse at early timesteps?
+* Is it a bug, a limitation of the training method, a model capacity issue?
+* With limited hardware, how small a dataset should one use?
+* Can the sampling process turn small bias issues into large errors?
 
-We'll dig into these questions, develop metrics that show more of what is going on with the training process. This will lead to a deeper understanding of diffusion, and many ideas to follow up on! We'll wrap up with a literature search and summarize how many of these ideas have been followed up on in the last five years. 
+We'll dig into these questions, develop metrics that show more of what is going on with the training process. We'll modify DDPM code from Hugging Face to get additional data points for our analysis. This will lead to a deeper understanding of diffusion, and many ideas to follow up on! We'll wrap up with a literature search and summarize how many of these ideas have been followed up on in the last five years. 
 
-
- see what has been done in the last 
-
-to get insightsthink about what happened after implementing DDPM from scratch, and understanding  following the im
-In this post, we'll work through the math of DDPM, implement it from scratch. DDPM makes use of the [UNet model](https://arxiv.org/abs/1505.04597) to learn how to denoise. We will implement a basic UNet run 
- running experiments, and then compare to then comparing to  with a scaled down model, and comparing to a full scale model using a colab from Hugging Face. use a scaled down UNet to carry out experiments on the celebrity headshot dataset, then compare to
-
-We'll look closely at the behavior of the model across timesteps, thinking about the auto-regressive nature of sampling, and how to control errors. Finally we'll see how the field has followed in these directions over the last five years.
 
 ## DDPM Math
 The math in DDPM is built on VAE type posterior Bayesian analysis where one faces intractible integrals and makes approximations as with the ELBO (evidence lower bound). It breaks up image generation into a number of small steps - each that removes a little bit more noise from a starting image of guassian noise. 

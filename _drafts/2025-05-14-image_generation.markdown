@@ -4,15 +4,22 @@ title:  "Image Generative AI - DDPM"
 date:   2025-05-14 12:38:00 -0800
 categories: jekyll update
 ---
-After digging into LLM's with the [Exploring the Transformer](https://mrcartoonology.github.io/jekyll/update/2025/05/13/exploring_the_transformer.html), [Orthogonal Gradient Unlearning](https://mrcartoonology.github.io/jekyll/update/2025/04/28/supercal_second_experiments.html) and [Tokens and Unlearning](https://mrcartoonology.github.io/jekyll/update/2025/04/16/supercal_first_experiments.html) posts, I've been eager to dig into image generation. 
+After digging into LLM's with the 
+[Exploring the Transformer](https://mrcartoonology.github.io/jekyll/update/2025/05/13/exploring_the_transformer.html), 
+[Orthogonal Gradient Unlearning](https://mrcartoonology.github.io/jekyll/update/2025/04/28/supercal_second_experiments.html) and 
+[Tokens and Unlearning](https://mrcartoonology.github.io/jekyll/update/2025/04/16/supercal_first_experiments.html) posts, 
+I've been eager to dig into image generation. 
 
-AI image generation took off with the paper [Denoising Diffusion Probabalistic Models](https://arxiv.org/abs/2006.11239) (DDPM) from 2020. DDPM produced higher quality images than the previous SOTA techniques such as GAN's and VAE's by improving diffusion - a method introduced in 2015 in the paper [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://arxiv.org/pdf/1503.03585). 
+AI image generation took off with the paper [Denoising Diffusion Probabalistic Models](https://arxiv.org/abs/2006.11239) (DDPM) from 2020. 
+DDPM produced higher quality images than the previous SOTA techniques such as GAN's and VAE's by improving diffusion - a method introduced in 2015 in the paper [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://arxiv.org/pdf/1503.03585). 
 
-This post covers the math of DDPM, and then switches into a research-style engineering log. I implemented DDPM from scratch with a simple model - and did not get beautiful images.  I got questions:
-* why is the modeling behaving this way?
+This post covers the math of DDPM, and then switches into a research-style engineering log. 
+I implemented DDPM from scratch with a simple model - and did not get beautiful images.  
+I got questions:
+* why does the modeling behave this way?
 * Why do the images get darker and darker during the sampling process?
 * Why is the loss worse at early timesteps?
-* Is it a bug, a limitation of the training method, a model capacity issue?
+* Is it a bug, a model capacity issue?
 * With limited hardware, how small a dataset should one use?
 * Can the sampling process turn small bias issues into large errors?
 

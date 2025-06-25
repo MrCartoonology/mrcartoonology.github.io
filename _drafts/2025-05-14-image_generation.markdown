@@ -1,13 +1,25 @@
 ---
 layout: post
-title:  "DRAFT: Image Generative AI - DDPM"
+title:  "Image Generative AI - DDPM"
 date:   2025-05-14 12:38:00 -0800
 categories: jekyll update
 ---
-Previous posts looked at [Transformers](https://mrcartoonology.github.io/jekyll/update/2025/05/13/exploring_the_transformer.html) and unlearning (in [Orthogonal Gradient Unlearning](https://mrcartoonology.github.io/jekyll/update/2025/04/28/supercal_second_experiments.html) and [Tokens and Unlearning](https://mrcartoonology.github.io/jekyll/update/2025/04/16/supercal_first_experiments.html)) in LLM's. Today we move on to image generation. The field took off with the paper [Denoising Diffusion Probabalistic Models](https://arxiv.org/abs/2006.11239) (DDPM) from 2020. DDPM dethroned current techniques, such as GAN's and VAE's for acheiving SOTA high quality image generation by improving diffusion - a technique introduces in 2015 in the paper [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://arxiv.org/pdf/1503.03585).
+After digging into LLM's with the [Exploring the Transformer](https://mrcartoonology.github.io/jekyll/update/2025/05/13/exploring_the_transformer.html), [Orthogonal Gradient Unlearning](https://mrcartoonology.github.io/jekyll/update/2025/04/28/supercal_second_experiments.html) and [Tokens and Unlearning](https://mrcartoonology.github.io/jekyll/update/2025/04/16/supercal_first_experiments.html) posts, I've been eager to dig into image generation. 
 
-# DDPM
-In this post, we'll work through the math of DDPM, implement it from scratch, and carry out some experiments that lead to unexpected observations. Our investigations will lead to a deeper understanding of DDPM, and hypothesis about where to look next. Finally we'll see how the field has followed up on these hypotheses over the last five years.
+AI image generation took off with the paper [Denoising Diffusion Probabalistic Models](https://arxiv.org/abs/2006.11239) (DDPM) from 2020. DDPM produced higher quality images than the previous SOTA techniques such as GAN's and VAE's by improving diffusion - a method introduced in 2015 in the paper [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://arxiv.org/pdf/1503.03585). 
+
+This post covers the math of DDPM, and then switches into a research-style engineering log. I implemented DDPM from scratch with a simple model - and did not get beautiful images.  I got questions - sampling takes many steps to denoise - and the result can drift away from what model learned to do during training - why? What metrics would expose this kind of problem, give clues how to fix it? What is the model learning for each timestep - how do I know it knows how to denoise at all the timesteps?
+
+We'll dig into these questions, develop metrics that show more of what is going on with the training process. This will lead to a deeper understanding of diffusion, and many ideas to follow up on! We'll wrap up with a literature search and summarize how many of these ideas have been followed up on in the last five years. 
+
+
+ see what has been done in the last 
+
+to get insightsthink about what happened after implementing DDPM from scratch, and understanding  following the im
+In this post, we'll work through the math of DDPM, implement it from scratch. DDPM makes use of the [UNet model](https://arxiv.org/abs/1505.04597) to learn how to denoise. We will implement a basic UNet run 
+ running experiments, and then compare to then comparing to  with a scaled down model, and comparing to a full scale model using a colab from Hugging Face. use a scaled down UNet to carry out experiments on the celebrity headshot dataset, then compare to
+
+We'll look closely at the behavior of the model across timesteps, thinking about the auto-regressive nature of sampling, and how to control errors. Finally we'll see how the field has followed in these directions over the last five years.
 
 ## DDPM Math
 The math in DDPM is built on VAE type posterior Bayesian analysis where one faces intractible integrals and makes approximations as with the ELBO (evidence lower bound). It breaks up image generation into a number of small steps - each that removes a little bit more noise from a starting image of guassian noise. 
@@ -245,21 +257,26 @@ For `t=1000`, where we are turning white noise into structured images - deep lea
 
 ## Boundary Values, Outliers
 
-Something interesting about the data, after mapping the RGB values of `[0, 255]` to `[-1, 1]` as the DDPM paper describes, a histogram shows a lot of `0` values, especially for blue
+Sampling from `N(0, I)` will sometimes produce big values. At the end though, the RGB values of our preprocessed images live in `[-1, 1]` -- with `-1` being the most common value (especially for blue):
 
 <div style="text-align: center;">
   <img src="/assets/images/imagegen/data_rgb_hist.png" style="width:100%;" />
 </div>
 
-The noise used during training or sampling will sometimes have large values well outside `[-1, 1]` - outliers.
+Given the slow training and dark saturation, this area warrants a closer look. 
 
-The simple algorithm drops the `L0` term, this is the loss term that teaches the model how to do the final decoding - it would assign `0` probability to values outside `[-1, 1]` - it seems like including this term would combat the spread of large negative values we saw during sampling.
+Another aspect of the simple algorithm is it drops the `L0` term.  The `L0` term is the loss that teaches the model how to do the final decoding - the DDPM paper provides a simple one that assigns a `0` probability to values outside `[-1, 1]`.
 
-Other things that would be interesting to experiment with
-* huber loss (as Hugging Face annoted Diffusion does)
-* clip the noise used in training and sampling to `[-1, 1]`
+Without the `L0` term, I wonder if the model can become less *grounded*? more likely to predict large negative or positive values? 
 
-On the one hand, clipping is appealing, why not just keep everything in [-1,1]? That is what we start with and end up with - but on the other hand, you are giving the model less information. The Guassian distribution maximizes entropy/information for a fixed variance - any adjustments here probably make things blurier for the model?
+Things that would be interesting to experiment with in this area
+* Adding the `L0` loss
+* Using a Huber loss (as Hugging Face annoted Diffusion does)
+* Clip all noise used during training and sampling to `[-1, 1]`
+
+On the one hand, clipping is appealing, why not just keep everything in [-1,1]? That is what we start with and end up with. This seems to be an easy way to eliminate outlier data that might throw the model off. 
+
+On the other hand, clipping reduces the entropy of the starting distribution -- maybe the model needs more entropy to work with, to create new images from? There is also the question of the math, the beautiful math is derived using properties of normal random variables. We can (and should) make changes to the final formulas to see if they works better - but seeing how the math changes as well could lead to more effective formulas.
 
 # Hallucination and Timestep Stability
 
@@ -293,4 +310,10 @@ A lot of these ideas have been developed in the field - some research shows
 
 # Conclusion
 
-We 
+It has been very interesting to work through DDPM and vary different aspects of the system - model capacity, number of timesteps. We've developed an appreciation for several things:
+* the challenge of denoising multiple timesteps with the same model
+* how time should be incorporated as input
+* metrics we can use for a model that predicts Guassian noise
+* how sampling includes an autoregressive component not present in training
+
+The study definitely motivates an interest in more recent approaches to image and video generation such as flow based models - but that is for another time! 

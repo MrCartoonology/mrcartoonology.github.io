@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Image Generative AI - DDPM"
-date:   2025-05-14 12:38:00 -0800
+date:   2025-06-24 12:38:00 -0800
 categories: jekyll update
 ---
 After digging into LLM's with the 
@@ -10,24 +10,17 @@ After digging into LLM's with the
 [Tokens and Unlearning](https://mrcartoonology.github.io/jekyll/update/2025/04/16/supercal_first_experiments.html) posts, 
 I've been eager to dig into image generation. 
 
-AI image generation took off with the paper [Denoising Diffusion Probabalistic Models](https://arxiv.org/abs/2006.11239) (DDPM) from 2020. 
-DDPM produced higher quality images than the previous SOTA techniques such as GAN's and VAE's by improving diffusion - a method introduced in 2015 in the paper [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://arxiv.org/pdf/1503.03585). 
+AI image generation took off with the paper [Denoising Diffusion Probabilistic Models](https://arxiv.org/abs/2006.11239) (DDPM) from 2020. 
+DDPM produced higher quality images than the previous SOTA (state of the art) techniques such as GAN's (Generative Adversarial Networks) and VAE's (Variational Auto Encoders) by improving diffusion - a method introduced in 2015 in the paper [Deep Unsupervised Learning using Nonequilibrium Thermodynamics](https://arxiv.org/pdf/1503.03585). 
 
 This post covers the math of DDPM, and then switches into a research-style engineering log. 
-I implemented DDPM from scratch with a simple model - and did not get beautiful images.  
-I got questions:
-* why does the modeling behave this way?
-* Why do the images get darker and darker during the sampling process?
-* Why is the loss worse at early timesteps?
-* Is it a bug, a model capacity issue?
-* With limited hardware, how small a dataset should one use?
-* Can the sampling process turn small bias issues into large errors?
-
-We'll dig into these questions, develop metrics that show more of what is going on with the training process. We'll modify DDPM code from Hugging Face to get additional data points for our analysis. This will lead to a deeper understanding of diffusion, and many ideas to follow up on! We'll wrap up with a literature search and summarize how many of these ideas have been followed up on in the last five years. 
+I implemented DDPM from scratch with a simple model. I trained the model and sampled from it. Despite decent-looking training loss curves, the sampled images were wrong - they got darker and darker during the sampling. This led to an interesting investigation.  I'll go over developing metrics to get additional insights, and then running modified DDPM code from Hugging Face to get data points to compare to. We'll end with a much deeper understanding of DDPM and many ideas to follow up on! We'll wrap up with a literature search and summarize how many of these ideas have been followed up on in the last five years. 
 
 
 ## DDPM Math
-I have worked through much of the derivation of the DDPM loss in these notes:
+The math in DDPM is built on VAE type posterior Bayesian analysis where one faces intractible integrals and makes approximations as with the ELBO (evidence lower bound). It breaks up image generation into a number of small steps - each that removes a little bit more noise from a starting image of Gaussian noise. 
+
+I have worked through much of the derivation of the DDPM loss in the notes below. These notes function as a companion to the paper, working through details rather than providing a complete story.  
   
   <iframe src="/assets/docs/imagegen/ddpm_math.pdf" width="100%" height="600px">
     This browser does not support PDFs. Please download the PDF to view it: 
@@ -36,41 +29,40 @@ I have worked through much of the derivation of the DDPM loss in these notes:
 
 here is a <a href="/assets/docs/imagegen/ddpm_math.pdf">PDF link</a> to these notes as well.
 
-The math in DDPM is built on VAE type posterior Bayesian analysis where one faces intractible integrals and makes approximations as with the ELBO (evidence lower bound). It breaks up image generation into a number of small steps - each that removes a little bit more noise from a starting image of guassian noise. 
 
 There are many resources available to understand the math and DDPM  --  here are a few:
 
 * Post by [Lilian Weng](https://lilianweng.github.io/posts/2021-07-11-diffusion-models/)
 * [Hugging Face annotated-diffusion](https://huggingface.co/blog/annotated-diffusion) easy to use code
-* [notes](https://web.stanford.edu/~jduchi/projects/general_notes.pdf) from Stanford that include deriving the KL divergence of two guassians.
+* [notes](https://web.stanford.edu/~jduchi/projects/general_notes.pdf) from Stanford that include deriving the KL divergence of two Gaussians.
 
 
 # Implemention
-This section will go through the implementation and outcomes of the first run. For reference, the code is in this branch [first_run](https://github.com/MrCartoonology/imagegen/tree/first_run) of this [repo](https://github.com/MrCartoonology/imagegen). (see repo readme about using/running the code.)
+This section will go through the implementation and outcomes of the first run. For reference, the code is in this branch [first_run](https://github.com/MrCartoonology/imagegen/tree/first_run) of this [repo](https://github.com/MrCartoonology/imagegen). (see repo [README.md](https://github.com/MrCartoonology/imagegen/blob/main/README.md) about using/running the code.)
 
 ## Data
 
 For these experiments I resized the [celebrity headshot dataset](https://drive.usercontent.google.com/open?id=1m8-EBPgi5MRubrm6iQjafK2QMHDBMSfJ&authuser=0)
- to 64 x 64. The orginal size is around 220 x 180. This was after wrestling with slow training. It let me load 200k images into memory (taking about 8GB RAM) to remove any data loading/preprocessing bottleneck. 
+ to 64 x 64. The original size is around 220 x 180. This was after wrestling with slow training. It let me load 200k images into memory (taking about 8GB RAM) to remove any data loading/preprocessing bottleneck. 
 
-However in hindsite, especially for the hardware I was using, better to start with smaller datasets. My hardware: 64GB RAM mac studio pro with M2 chip. I saw some impressive speedups with the Apple Silicon by using the pytorch `mps` device, but despite this, all my training runs were slow (taking days). 
+However in hindsight, especially for the hardware I was using, better to start with smaller datasets. My hardware: 64GB RAM mac studio pro with M2 chip. I saw some impressive speedups with the Apple Silicon by using the pytorch `mps` device, but despite this, all my training runs were slow (taking days). 
 
 ### Small Dataset
 The smallest dataset I saw for generative AI, is in the example [code](https://github.com/jmtomczak/intro_dgm) that accompanies the [Deep Generative Modeling](https://link.springer.com/book/10.1007/978-3-031-64087-2) book by Jakub Tomczak. The dataset is `load_digits` from `sklearn`. For instance take a look at [this VAE example notebook](https://github.com/jmtomczak/intro_dgm/blob/main/vaes/vae_example.ipynb).
 
 ## UNet
 
-DDPM uses the [UNet](https://arxiv.org/abs/1505.04597) architechture from 2015 to learn how to denoise.
-Since my images were smaller, I tried a smaller simpler [UNet](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L85). 
-It had no attention in the middle and was built just based on looking at the 2015 [unet paper](https://arxiv.org/abs/1505.04597). It ended up being quite small, too small I think - about 1/2 million parameters instead of 57 million in the next runs.
+DDPM uses the [UNet](https://arxiv.org/abs/1505.04597) architecture from 2015 to learn how to denoise.
+Since my images were smaller, I tried a smaller simpler UNet - [code link](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L85). 
+It had no attention in the middle and was built just based on looking at the 2015 [UNet](https://arxiv.org/abs/1505.04597) paper. It ended up being quite small, too small I think - about 1/2 million parameters instead of 57 million in the next runs.
 
 ### Incorporating t
 
-The unet takes both the image to denoise, and the timestep `t`. I took a simple approach to incorporating `t` into the model
+The UNet takes both the image to denoise, and the timestep `t`. I took a simple approach to incorporating `t` into the model
 * a [sinusoidal embedding](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L75) is made as in other work
 * a [simple nonlinear MLP](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L89) learns something about it (the same kind of MLP you see in other work)
-* There is just one MLP - it is applied at the [beginning of the foward pass](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L125)
-* and then [linear projections](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L91) resize to the correct shape, for input to blocks.
+* However there is just one MLP - it is applied at the [beginning of the forward pass](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L125)
+  * different blocks that use the time as input learn [linear projections](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L91) resize it to the correct shape.
 
 ## Following DDPM
 
@@ -84,7 +76,7 @@ This first run had some interesting problems. Here is a plot of the training and
   <img src="/assets/images/imagegen/ddpm_train_loss_first_run.png" style="width:100%;" />
 </div>
 
-The first potiential problem is slow convergence. However, if the images produced are good at this point, it is not a problem - but despite having learned something - the sampled images are bad. We start with pure Guassian noise at `t=1000` by sampling from `N(0, I)`, but what we get from the reverse process at `t=1` is:
+The first potential problem is slow convergence. However, if the images produced are good at this point, it is not a problem - but despite having learned something - the sampled images are bad. We start with pure Gaussian noise at `t=1000` by sampling from `N(0, I)`, but what we get from the reverse process at `t=1` is:
 
 <table style="width:100%; text-align:center;">
   <tr>
@@ -124,19 +116,19 @@ There are 1000 steps, in float32.
 An interesting difference between training and sampling is that sampling has an auto-regressive property that training does not. 
 Sampling applies the model 1000 times to previous model output (and new noise) to get the next output  - errors or model bias could accumulate. 
 Training on the other hand does not. 
-To train timestep `t`, we go straight from `x0` and noise to get a training pair a `x_{t-1}` and `x_{t}`.
+To train timestep `t`, we go straight from `x0` and noise to get a training pair:  `x_{t-1}` and `x_{t}`.
 
 
 #### DDPM Training
 
-In a little more detail, the model is learning the noise to remove at timestep `t`. Given `x0`, we can compute a `x_t` and `x_{t-1}` for training by getting two distinct Guassians  `e_t` and `e_{t-1}` from `N(0|I)` and taking an appropriate weighted sums (based on noise schedule, formulas for `w_t` and `g_t` in the DDPM paper and math notes above):
+In a little more detail, the model is learning the noise to remove at timestep `t`. Given `x0`, we can compute a `x_t` and `x_{t-1}` for training by getting two distinct Gaussians  `e_t` and `e_{t-1}` from `N(0|I)` and taking an appropriate weighted sums (based on noise schedule, formulas for `w_t` and `g_t` in the DDPM paper and math notes above):
 
 ```
 x_t = w_t * x0 + g_t e_t
 x_{t-1} = w_{t-1} * x0 + g_{t-1} e_{t-1}
 ```
 
-and then predict the difference, the model `unet_{t-1}(x_t, t)` predicts `e` such that
+and then predict the difference, the model `UNet(x_t, t)` predicts `e` such that
 
 ```
 x_{t} - e = x_{t-1}
@@ -149,6 +141,8 @@ The findings above raise questions about the model's performance at different ti
 
 * loss per t
 * model bias per t
+
+Code reference for these metrics is the branch [ddpmeval](https://github.com/MrCartoonology/imagegen/tree/evalddpm).
 
 
 ## Loss per t
@@ -163,11 +157,11 @@ This looks bad - but we will see the same behavior for the hugging face code we 
 
 * On the one hand, the scale of the models predictions aren't changing over the timesteps
   * it is always predicting noise  `eps ~ N(0,I)`. 
-    * So the loss per `t` should be the same as its predicting the same thing.
+    * So shouldn't the loss per `t` be about the same since it always predicts from `N(0, I)`?
 * However much less noise is added at `t=1` (variance = 1e-4) than `t=T` (variance=0.02). 
 * In the limit, if we added **no** noise, we couldn't predict anything - so the loss would be equivalent to what we'd get by making random predictions.
   * Therefore it makes sense the loss is worse for `t=1` than `t=T`
-  * However it seems like it should be easier to remove that little bit of noise when we are close to a final picture, then a lot of noise when we are close to white noise?
+* However it seems like it should be easier to remove that little bit of noise when we are close to a final picture, then a lot of noise when we are close to white noise?
 
 ## Prediction Bias per t
 
@@ -177,30 +171,27 @@ The 2020 DDPM paper built on the 2015 diffusion paper in a few ways, and one is 
   <img src="/assets/images/imagegen/ddpm_t_mu_std.png" style="width:100%;" />
 </div>
 
-The mean prediction is not `0`, it is positive (around `0.08`). An additional hypothesis is 
+The mean prediction is not `0`, it is positive (around `0.08`). 
 
-* model capacity.
-
-## Code Reference 
-(code reference for metrics below - branch [ddpmeval](https://github.com/MrCartoonology/imagegen/tree/evalddpm))
+An additional hypothesis for the problems we're seeing is **model capacity**.
 
 # Hugging Face Code
 
-The Hugging Face Annoted DDPM provides a [colab](https://colab.research.google.com/github/huggingface/notebooks/blob/main/examples/annotated_diffusion.ipynb) that is easy to run - (also see this [pytorch DDPM repo](https://github.com/lucidrains/denoising-diffusion-pytorch)). 
+The Hugging Face Annotated DDPM provides a [colab](https://colab.research.google.com/github/huggingface/notebooks/blob/main/examples/annotated_diffusion.ipynb) that is easy to run - (also see this [pytorch DDPM repo](https://github.com/lucidrains/denoising-diffusion-pytorch)). 
 
 For reference I'm running it from this [branch of my repo](https://github.com/MrCartoonology/imagegen/tree/fixrun), using [this modified notebook](https://github.com/MrCartoonology/imagegen/blob/fixrun/notebooks/annotated_diffusion_celeba2.ipynb). 
 
 The UNet for this run has much more capacity:
 * 50 million weights vs 1/2 million
 * visual attention layer
-* each unet block has its own MLP to apply to the timestep embedding
+* each UNet block has its own MLP to apply to the timestep embedding
   * first run had one MLP shared among blocks
 
-Other differnces
+Other differences
 * T=200 instead of 1000, use x5 less timesteps
 * The original hugging face code applies random left to right flips of the data, but that is disabled for my memory cached dataset of celeba
 
-After 10 hours of training, the loss is better than before
+After 10 hours of training, the loss is better than before, a testament to the higher model capacity
 
 <div style="text-align: center;">
   <img src="/assets/images/imagegen/ddpm_hf_train_loss.png" style="width:80%;" />
@@ -256,11 +247,11 @@ that plot like
   <img src="/assets/images/imagegen/ddpm_simple_algo_dropped_mse_weights.png" style="width:100%;" />
 </div>
 
-The simplified algorithm drops the `wt` from the loss that is used. The paper points out that later `t` is harder, so dropping these weights will help the model focus on the harder timesteps. The plot of the `wt` supports this, the `wt` clearly spike up for the early timesteps, however  given the t-loss curve, I'm wondering if I'd like to keep the `wt`! Those big weights near `t=1` might help the model train faster! However focusing on the loss too much can be a mistake - the highest quality images are not neccessarily generated by the model acheiving the lowest loss.
+The simplified algorithm drops the `wt` from the loss that is used. The paper points out that later `t` are harder, so dropping these weights will help the model focus on the harder timesteps. The plot of the `wt` supports this, the `wt` clearly spike up for the early timesteps, however  given the t-loss curve, I'm wondering if I'd like to keep the `wt`! Those big weights near `t=1` might help the model train faster! However focusing on the loss too much can be a mistake - the highest quality images are not necessarily generated by the model achieving the lowest loss.
 
 ## View Denoising Diffusion as a Multi-task Problem?
 
-One the one hand, removing noise at `t=1000` must be very similar to `t=999`, one model for both 'tasks' makes sense, but maybe removing noise at `t=1` is very different? 
+On the one hand, removing noise at `t=1000` must be very similar to `t=999`, one model for both 'tasks' makes sense, but maybe removing noise at `t=1` is very different? 
 
 It would be interesting to see what kind of loss we could get for a model trained only for the `t=1` data.
 
@@ -277,36 +268,43 @@ Sampling from `N(0, I)` will sometimes produce big values. At the end though, th
   <img src="/assets/images/imagegen/data_rgb_hist.png" style="width:100%;" />
 </div>
 
-Given the slow training and dark saturation, this area warrants a closer look. If a low capacity model does pick up a bias - it seems those spikes at `-1` would dominate.
+Given the slow training and dark saturation, I wonder if we should help the model predict these boundary values, and if outliers from sample noise create problems. For instance, if a low capacity model does pick up a bias - it seems those spikes at `-1` would dominate.
 
-Another aspect of the simple algorithm is it drops the `L0` term.  The `L0` term is the loss that teaches the model how to do the final decoding - the DDPM paper provides a simple one that assigns a `0` probability to values outside `[-1, 1]`.
+Another aspect of the simple algorithm is it drops the `L0` term.  The `L0` term is the loss that teaches the model how to do the final decoding - the DDPM paper provides a simple decoding that assigns a `0` probability to values outside `[-1, 1]`.
 
 Without the `L0` term, I wonder if the model can become less *'grounded'*? more likely to predict large negative or positive values? 
 
-Things that would be interesting to experiment with in this area
+Possibe experiments include:
 * Adding the `L0` loss
-* Using a Huber loss (as Hugging Face annoted Diffusion does)
+* Using a Huber loss (as Hugging Face Annotated Diffusion does)
 * Clip all noise used during training and sampling to `[-1, 1]`
 
-On the one hand, clipping is appealing, why not just keep everything in `[-1,1]`? That is what we start with and end up with. This seems to be an easy way to eliminate outlier data that might throw the model off. 
+On the one hand, clipping is appealing, why not just keep everything in `[-1,1]`? That is what we want to end up with at `t=0`, why not start with it at `t=1000` and along the way? This seems to be an easy way to eliminate outlier data that might throw the model off. 
 
-On the other hand, clipping reduces the entropy of the starting distribution -- maybe the model needs more entropy to work with, to create new images from? There is also the question of the math, the beautiful math is derived using properties of normal random variables. We can (and should) make these kinds of easy changes to the final formulas to see if we get better image generation  - but re-working the math using different distributions (if possible) could lead to more effective formulas.
+On the other hand, clipping reduces the entropy of the starting distribution -- maybe the model needs more entropy to work with, to create new images from? There is also the question of the math, the beautiful math is derived using properties of normal random variables. We can (and should) make these kinds of easy changes to the final formulas to see if we get better image generation  - but re-working the math using different distributions (if possible) could lead to better performance.
 
 # Hallucination and Timestep Stability
 
-I would say my first run had bad hallucinations. There's good hallucinations where the model gets creative and comes up with new interesting things - but gradually darkening the image is getting too far from the target distribution. Bad hallucination. 
+I would say my first run had bad hallucinations. There are good hallucinations where the model gets creative and comes up with new interesting things - but gradually darkening the image drifts too far from the target distribution. Bad hallucination. 
 
-It seems similar to how LLM's can hallucinate. Training for LLM's and DDPM is not auto regressive - you only predict the next token or noise to remove based on training data (as discussed above for DDPM). However I'd say there is an auto regressive nature to the sampling and inference.
+It seems similar to how LLM's can hallucinate. Training for LLM's and DDPM is not auto regressive - you only predict the next token or noise to remove based on training data (as discussed above for DDPM). However I'd say there is an auto regressive nature to the sampling and inference, and hypothesis it can be vulnerable to instability.
 
-How to make this stable? Clearly it has been done - look at all the prodcution ready models out there! None the less, some thoughts on the subject.
+One approach to more stable sampling could come from numerical ODE solvers. There are a lot of techniques about making them stable. But perhaps this kind of stability development is more applicable to flow based models - perhaps that is why a recent SOTA model ([the black forest labs FLUX.1 Kontext](https://bfl.ai/announcements/flux-1-kontext) ) if flow based?
 
-The multi timestep sampling makes me thing of numerical ODE solvers. There are a lot of techniques about making them stable. But perhaps this kind of stability development is more applicable to flow based models - perhaps that is why a recent SOTA model ([the black forest labs FLUX.1 Kontext](https://bfl.ai/announcements/flux-1-kontext) ) if flow based?
+With a background in Geometric Mechanics, I am thinking about work like - [Controlled Lagrangians and Stabilization of Discrete Mechanical Systems](https://arxiv.org/pdf/0704.3875). Basically, if you write a numerical ODE solver for a mechanical system  - you can leverage the fact that the total energy for the system will be constant over time. Developing an ODE solver that keeps the energy constant can improve numerical stability. However that won't help if the system is inheritently unstable - the classic problem in this field is the challenge of controlling an inverted pendulum. The method of Controlled Lagrangians derives the controller by first modifying the potential and kinetic energy of a mechanical system so that you
 
-With a background in Geometric Mechanics, I am thinking about work like - [Controlled Lagrangians and Stabilization of Discrete Mechanical Systems](https://arxiv.org/pdf/0704.3875). Basically, if you write a numerical ODE solver for a mechanical system  - one thing you can do is keep the energy constant. The total energy for the system will be constant over time. Developing an ODE solver that keeps the energy constant can improve stability. Even so, you may find your dynamics unstable - the classic problem in this field is controlling an inverted pendulum. The method of Controlled Lagrangians derives the controller by modifying the potential and kinetic energy of a mechanical system so that the dynamics are stable. 
+* get stable dynamics
+* can split the equations of motion into 
+  * the uncontrolled system
+  * and forces coming from a controller
+
+the beauty is that the controller will be stable.
 
 ## Training Multiple Timesteps
 
-DDPM uniformly samples t and trains each stage independently, ie, `model_{t-1}` is trained from input `x_t` and label `x_{t-1}`. What if we also trained `model_{t-1}` and `model_t` using `x_{t-1}` and `x_{t+1}`? To train some of the auto-regressive behavior of sampling?
+DDPM uniformly samples `t` and trains each stage independently. For a given `x0` from the training data, we generate one input and output for the model to train on -- the model will get input `x_t` and label `x_{t-1}`. 
+
+Could we train on a longer sequence? Using the model's prediction for `x_{t-1}` to get to `x_{t-2}`? Sampling will use the models predictions - maybe they could be incorporated into training.
 
 ## Why is Training Slow? A Lot of Entropy to Cover
 With only 200k images, despite doing multiple epochs, my training runs had still not converged - but the model is not trained on just the 200k images - it is always trained on image + noise. We'll never cover all the noise from `N(0, I)` over 3 x 64 x 64 = 12,288 dimensions - and it makes me wonder how many samples we need to train on to get good generalization from the model, vs how many might lead to overfitting, and memorizing the 200k training images.
@@ -315,7 +313,7 @@ The next milestone after DDPM was [Latent Diffusion Models](https://arxiv.org/ab
 
 # How do these Ideas Resonate with the Field?
 
-A lot of these ideas have been developed in the field. From AI deep research:
+A lot of these ideas have been developed in the field.
 
 **Loss is typically higher at low-noise timesteps.**  Several works show that denoising small amounts of noise (e.g. at `t=1`) is harder for the model. [Denoising Task Difficulty-Based Curriculum Learning](https://arxiv.org/abs/2401.12020) from 2024 confirms that low-noise steps are empirically more difficult and slower to converge. 
 
@@ -329,8 +327,6 @@ A lot of these ideas have been developed in the field. From AI deep research:
 
 # Conclusion
 
-# Conclusion
-
 Implementing DDPM from scratch and analyzing its training and sampling behavior led to several key insights:
 
 * Sampling introduces autoregressive instability not present in training.
@@ -340,8 +336,6 @@ Implementing DDPM from scratch and analyzing its training and sampling behavior 
 
 Working through the math led to a second set of insights. DDPM starts from maximum entropy—pure `N(0, I)` noise—and gradually evolves toward a coherent image. As an artist, that feels like the reverse of how we create. I start from a blank slate—zero entropy—and add structure step by step: sketch, inking, color, shading, lighting.
 
-It makes me wonder: can we build generative models that follow this more *constructive* process? Could modeling each artistic phase as a separate step improve training stability, interpretability, or even creativity?
+It makes me wonder: can we build generative models that follow this more *constructive* process? I think modeling each artistic phase as a separate step would lead to powerful models giving users much more control over the artistic process.
 
-The field has already come a long way since DDPM. With latent diffusion, autoregressive improvements, and physics-inspired methods like FLUX.1, I’m excited to explore what's next.
-
-The question now is: how do we move from removing noise to building meaning?
+The field has progressed a great deal since DDPM. With latent diffusion, autoregressive improvements, and physics-inspired methods like FLUX.1, I’m excited to explore what's next!

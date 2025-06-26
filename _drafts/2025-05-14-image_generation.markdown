@@ -329,11 +329,19 @@ A lot of these ideas have been developed in the field. From AI deep research:
 
 # Conclusion
 
+# Conclusion
+
 Implementing DDPM from scratch and analyzing its training and sampling behavior led to several key insights:
 
-* Sampling introduces autoregressive instability not present in training
-* Low-noise steps (e.g. `t=1`) are harder for the model to denoise effectively
-* Model capacity is important for DDPM
-* Metrics like loss-per-timestep and prediction mean/std are valuable for diagnosing modeling issues
+* Sampling introduces autoregressive instability not present in training.
+* Low-noise steps (e.g., `t=1`) are harder for the model to denoise effectively.
+* Model capacity significantly affects DDPM performance.
+* Metrics like loss-per-timestep and prediction mean/std are valuable for diagnosing modeling issues.
 
-Working through the math led to another set of ideas as well - it is so interesting to see how DDPM starts from maximum entropy - the `N(0, I)` distribution and evolves towards an image. As an artist, I feel like I start with a blank slate - `0` entropy, that I add to - and I wonder how to build a generative model that creates art like we do? Using normal distributions since they are so tractible? Breaking up illustration into many timesteps that are easier to model - what sort of modeling can we do? Can there be sketching steps? Block coloring steps, inking steps? Lighting steps, etc? The field of image generative AI has evolved a great deal since DDPM - it will be exciting to dig into what else has been down, and see what comes next!
+Working through the math led to a second set of insights. DDPM starts from maximum entropy—pure `N(0, I)` noise—and gradually evolves toward a coherent image. As an artist, that feels like the reverse of how we create. I start from a blank slate—zero entropy—and add structure step by step: sketch, inking, color, shading, lighting.
+
+It makes me wonder: can we build generative models that follow this more *constructive* process? Could modeling each artistic phase as a separate step improve training stability, interpretability, or even creativity?
+
+The field has already come a long way since DDPM. With latent diffusion, autoregressive improvements, and physics-inspired methods like FLUX.1, I’m excited to explore what's next.
+
+The question now is: how do we move from removing noise to building meaning?

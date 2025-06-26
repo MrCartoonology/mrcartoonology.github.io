@@ -34,10 +34,10 @@ There are many resources available to understand the math and DDPM  --  here are
 
 * Post by [Lilian Weng](https://lilianweng.github.io/posts/2021-07-11-diffusion-models/)
 * [Hugging Face annotated-diffusion](https://huggingface.co/blog/annotated-diffusion) easy to use code
-* [notes](https://web.stanford.edu/~jduchi/projects/general_notes.pdf) from Stanford that include deriving the KL divergence of two Gaussians.
+* [Notes](https://web.stanford.edu/~jduchi/projects/general_notes.pdf) from Stanford that include deriving the KL divergence of two Gaussians
 
 
-# Implemention
+# Implementation
 This section will go through the implementation and outcomes of the first run. For reference, the code is in this branch [first_run](https://github.com/MrCartoonology/imagegen/tree/first_run) of this [repo](https://github.com/MrCartoonology/imagegen). (see repo [README.md](https://github.com/MrCartoonology/imagegen/blob/main/README.md) about using/running the code.)
 
 ## Data
@@ -61,12 +61,12 @@ It had no attention in the middle and was built just based on looking at the 201
 The UNet takes both the image to denoise, and the timestep `t`. I took a simple approach to incorporating `t` into the model
 * a [sinusoidal embedding](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L75) is made as in other work
 * a [simple nonlinear MLP](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L89) learns something about it (the same kind of MLP you see in other work)
-* However there is just one MLP - it is applied at the [beginning of the forward pass](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L125)
-  * different blocks that use the time as input learn [linear projections](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L91) resize it to the correct shape.
+* however there is just one MLP - it is applied at the [beginning of the forward pass](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L125)
+  * different blocks that use the time as input learn [linear projections](https://github.com/MrCartoonology/imagegen/blob/first_run/src/imagegen/unet.py#L91) resize it to the correct shape
 
 ## Following DDPM
 
-This first run followed the DDPM paper total number of timesteps to run the diffusion process: `T=1000` and linear noise schedule with `beta_1=1e-4` and `beta_T=0.02`.  The noise schedule is how much guassian noise to add to `x_{t-1}` to get `x_{t}`, where `beta_t` is the variance of the added noise.
+This first run followed the DDPM paper total number of timesteps to run the diffusion process: `T=1000` and linear noise schedule with `beta_1=1e-4` and `beta_T=0.02`.  The noise schedule is how much Gaussian noise to add to `x_{t-1}` to get `x_{t}`, where `beta_t` is the variance of the added noise.
 
 
 ## Outcomes
@@ -89,7 +89,7 @@ The first potential problem is slow convergence. However, if the images produced
   </tr>
 </table>
 
-The `t=1` denoised image has a lot of black in it. Also some highly saturated R G B values. 
+The `t=1` denoised image has a lot of black in it. Also some highly saturated RGB values. 
 
 Note that the preprocessed images have mapped the RGB values of `[0, 255]` to `[-1, 1]`.  The noise we start out with at `t=1000` is sampled from `N(0, I)`. It can have values outside `[-1, 1]`. 
 
@@ -139,8 +139,8 @@ x_{t} - e = x_{t-1}
 
 The findings above raise questions about the model's performance at different timesteps. Two things to look at:
 
-* loss per t
-* model bias per t
+* Loss per t
+* Model bias per t
 
 Code reference for these metrics is the branch [ddpmeval](https://github.com/MrCartoonology/imagegen/tree/evalddpm).
 
@@ -153,13 +153,13 @@ The loss is much worse at `t=1` than `t=1000`
   <img src="/assets/images/imagegen/ddpm_t_loss.png" style="width:100%;" />
 </div>
 
-This looks bad - but we will see the same behavior for the hugging face code we run next - suggesting this is just how DDPM works, but why? Some thoughts:
+This looks bad - but we will see the same behavior for the Hugging Face code we run next - suggesting this is just how DDPM works, but why? Some thoughts:
 
-* On the one hand, the scale of the models predictions aren't changing over the timesteps
-  * it is always predicting noise  `eps ~ N(0,I)`. 
+* On the one hand, the scale of the model's predictions aren't changing over the timesteps
+  * it is always predicting noise  `eps ~ N(0,I)`
     * So shouldn't the loss per `t` be about the same since it always predicts from `N(0, I)`?
-* However much less noise is added at `t=1` (variance = 1e-4) than `t=T` (variance=0.02). 
-* In the limit, if we added **no** noise, we couldn't predict anything - so the loss would be equivalent to what we'd get by making random predictions.
+* However much less noise is added at `t=1` (variance = 1e-4) than `t=T` (variance=0.02)
+* In the limit, if we added **no** noise, we couldn't predict anything - so the loss would be equivalent to what we'd get by making random predictions
   * Therefore it makes sense the loss is worse for `t=1` than `t=T`
 * However it seems like it should be easier to remove that little bit of noise when we are close to a final picture, then a lot of noise when we are close to white noise?
 
@@ -183,13 +183,13 @@ For reference I'm running it from this [branch of my repo](https://github.com/Mr
 
 The UNet for this run has much more capacity:
 * 50 million weights vs 1/2 million
-* visual attention layer
-* each UNet block has its own MLP to apply to the timestep embedding
+* Visual attention layer
+* Each UNet block has its own MLP to apply to the timestep embedding
   * first run had one MLP shared among blocks
 
 Other differences
 * T=200 instead of 1000, use x5 less timesteps
-* The original hugging face code applies random left to right flips of the data, but that is disabled for my memory cached dataset of celeba
+* The original Hugging Face code applies random left to right flips of the data, but that is disabled for my memory cached dataset of celeba
 
 After 10 hours of training, the loss is better than before, a testament to the higher model capacity
 
@@ -274,7 +274,7 @@ Another aspect of the simple algorithm is it drops the `L0` term.  The `L0` term
 
 Without the `L0` term, I wonder if the model can become less *'grounded'*? more likely to predict large negative or positive values? 
 
-Possibe experiments include:
+Possible experiments include:
 * Adding the `L0` loss
 * Using a Huber loss (as Hugging Face Annotated Diffusion does)
 * Clip all noise used during training and sampling to `[-1, 1]`
@@ -287,14 +287,14 @@ On the other hand, clipping reduces the entropy of the starting distribution -- 
 
 I would say my first run had bad hallucinations. There are good hallucinations where the model gets creative and comes up with new interesting things - but gradually darkening the image drifts too far from the target distribution. Bad hallucination. 
 
-It seems similar to how LLM's can hallucinate. Training for LLM's and DDPM is not auto regressive - you only predict the next token or noise to remove based on training data (as discussed above for DDPM). However I'd say there is an auto regressive nature to the sampling and inference, and hypothesis it can be vulnerable to instability.
+It seems similar to how LLM's can hallucinate. Training for LLM's and DDPM is not auto regressive - you only predict the next token or noise to remove based on training data (as discussed above for DDPM). However I'd say there is an auto regressive nature to the sampling and inference, and hypothesize that it can be vulnerable to instability.
 
-One approach to more stable sampling could come from numerical ODE solvers. There are a lot of techniques about making them stable. But perhaps this kind of stability development is more applicable to flow based models - perhaps that is why a recent SOTA model ([the black forest labs FLUX.1 Kontext](https://bfl.ai/announcements/flux-1-kontext) ) if flow based?
+One approach to more stable sampling could come from numerical ODE solvers. There are a lot of techniques about making them stable. But perhaps this kind of stability development is more applicable to flow based models - perhaps that is why a recent SOTA model ([the black forest labs FLUX.1 Kontext](https://bfl.ai/announcements/flux-1-kontext) ) is flow based?
 
-With a background in Geometric Mechanics, I am thinking about work like - [Controlled Lagrangians and Stabilization of Discrete Mechanical Systems](https://arxiv.org/pdf/0704.3875). Basically, if you write a numerical ODE solver for a mechanical system  - you can leverage the fact that the total energy for the system will be constant over time. Developing an ODE solver that keeps the energy constant can improve numerical stability. However that won't help if the system is inheritently unstable - the classic problem in this field is the challenge of controlling an inverted pendulum. The method of Controlled Lagrangians derives the controller by first modifying the potential and kinetic energy of a mechanical system so that you
+With a background in Geometric Mechanics, I am thinking about work like - [Controlled Lagrangians and Stabilization of Discrete Mechanical Systems](https://arxiv.org/pdf/0704.3875). Basically, if you write a numerical ODE solver for a mechanical system  - you can leverage the fact that the total energy for the system will be constant over time. Developing an ODE solver that keeps the energy constant can improve numerical stability. However that won't help if the system is inherently unstable - the classic problem in this field is the challenge of controlling an inverted pendulum. The method of Controlled Lagrangians derives the controller by first modifying the potential and kinetic energy of a mechanical system so that you
 
-* get stable dynamics
-* can split the equations of motion into 
+* Get stable dynamics
+* Can split the equations of motion into 
   * the uncontrolled system
   * and forces coming from a controller
 
@@ -304,7 +304,7 @@ the beauty is that the controller will be stable.
 
 DDPM uniformly samples `t` and trains each stage independently. For a given `x0` from the training data, we generate one input and output for the model to train on -- the model will get input `x_t` and label `x_{t-1}`. 
 
-Could we train on a longer sequence? Using the model's prediction for `x_{t-1}` to get to `x_{t-2}`? Sampling will use the models predictions - maybe they could be incorporated into training.
+Could we train on a longer sequence? Using the model's prediction for `x_{t-1}` to get to `x_{t-2}`? Sampling will use the model's predictions - maybe they could be incorporated into training.
 
 ## Why is Training Slow? A Lot of Entropy to Cover
 With only 200k images, despite doing multiple epochs, my training runs had still not converged - but the model is not trained on just the 200k images - it is always trained on image + noise. We'll never cover all the noise from `N(0, I)` over 3 x 64 x 64 = 12,288 dimensions - and it makes me wonder how many samples we need to train on to get good generalization from the model, vs how many might lead to overfitting, and memorizing the 200k training images.
